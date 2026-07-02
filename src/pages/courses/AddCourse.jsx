@@ -61,11 +61,13 @@ export default function AddCourse() {
           setValue('title', course.title);
           setValue('category', course.category?._id || course.category);
           setValue('fullDesc', course.description);
-          setValue('difficulty', course.level ? course.level.toLowerCase() : 'beginner');
+          setValue('difficulty', course.level || '');
           setValue('regularPrice', course.originalPrice || course.price);
           setValue('discountPrice', course.originalPrice ? course.price : '');
           setValue('faculty', course.instructor?._id || course.instructor);
           setValue('previewVideoUrl', course.previewVideoUrl || '');
+          setValue('thumbnail', course.thumbnail || '');
+          setValue('banner', course.banner || '');
           
           setValue('learningOutcomes', course.learningOutcomes || []);
           setValue('liveSessions', course.liveSessions || []);
@@ -133,10 +135,12 @@ export default function AddCourse() {
         slug: data.slug || undefined,
         description: data.fullDesc || data.shortDesc || '',
         category: data.category || undefined,
-        level: data.difficulty === 'beginner' ? 'Beginner' : data.difficulty === 'intermediate' ? 'Intermediate' : data.difficulty === 'advanced' ? 'Advanced' : 'All Levels',
+        level: data.difficulty || '',
         price: finalPrice || 0,
         originalPrice: finalOriginalPrice || 0,
         previewVideoUrl: data.previewVideoUrl || '',
+        thumbnail: data.thumbnail || '',
+        banner: data.banner || '',
         status: statusToSet,
         instructor: instructorId,
         learningOutcomes: data.learningOutcomes || [],
@@ -170,6 +174,30 @@ export default function AddCourse() {
     }
   };
 
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    const baseUrl = import.meta.env.VITE_API_URL 
+      ? import.meta.env.VITE_API_URL.replace('/api/v1', '') 
+      : 'http://localhost:5000';
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
+  const handleImageUpload = async (e, fieldName) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const res = await uploadFile(file);
+      if (res.success) {
+        setValue(fieldName, res.url);
+        alert('Image uploaded successfully!');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to upload image');
+    }
+  };
+
   const handleVideoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -177,10 +205,7 @@ export default function AddCourse() {
     try {
       const res = await uploadFile(file);
       if (res.success) {
-        const fullUrl = import.meta.env.VITE_API_URL 
-          ? import.meta.env.VITE_API_URL.replace('/api/v1', '') + res.url 
-          : 'http://localhost:5000' + res.url;
-        setValue('previewVideoUrl', fullUrl);
+        setValue('previewVideoUrl', res.url);
         alert('Video uploaded successfully!');
       }
     } catch (err) {
@@ -224,11 +249,13 @@ export default function AddCourse() {
                 <textarea {...register('fullDesc')} rows={5} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20" placeholder="Detailed course description..." />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-main mb-1.5">Difficulty Level</label>
+                <label className="block text-sm font-medium text-text-main mb-1.5">Difficulty Level (Optional)</label>
                 <select {...register('difficulty')} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20">
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
+                  <option value="">None (Hide)</option>
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                  <option value="All Levels">All Levels</option>
                 </select>
               </div>
               <div>
@@ -247,19 +274,33 @@ export default function AddCourse() {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-text-main mb-2">Course Thumbnail (1:1 Ratio)</label>
-                <div className="w-full h-40 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-100 hover:border-brand-primary cursor-pointer transition-colors">
-                  <Upload className="w-8 h-8 mb-2" />
-                  <span className="text-sm font-medium">Drag & Drop or Click to Upload</span>
-                  <span className="text-xs mt-1">Recommended size: 600x600px. Max 2MB.</span>
-                </div>
+                <label className="block w-full h-40 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-100 hover:border-brand-primary cursor-pointer transition-colors overflow-hidden">
+                  {watch('thumbnail') ? (
+                    <img src={getFullUrl(watch('thumbnail'))} alt="Thumbnail" className="w-full h-full object-contain bg-black/5" />
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 mb-2" />
+                      <span className="text-sm font-medium">Drag & Drop or Click to Upload</span>
+                      <span className="text-xs mt-1">Recommended size: 600x600px. Max 2MB.</span>
+                    </>
+                  )}
+                  <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'thumbnail')} />
+                </label>
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-main mb-2">Course Banner (16:9 Ratio)</label>
-                <div className="w-full h-48 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-100 hover:border-brand-primary cursor-pointer transition-colors">
-                  <Upload className="w-8 h-8 mb-2" />
-                  <span className="text-sm font-medium">Drag & Drop or Click to Upload</span>
-                  <span className="text-xs mt-1">Recommended size: 1920x1080px. Max 5MB.</span>
-                </div>
+                <label className="block w-full h-48 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-100 hover:border-brand-primary cursor-pointer transition-colors overflow-hidden">
+                  {watch('banner') ? (
+                    <img src={getFullUrl(watch('banner'))} alt="Banner" className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 mb-2" />
+                      <span className="text-sm font-medium">Drag & Drop or Click to Upload</span>
+                      <span className="text-xs mt-1">Recommended size: 1920x1080px. Max 5MB.</span>
+                    </>
+                  )}
+                  <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'banner')} />
+                </label>
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-main mb-2">Course Preview Video URL</label>
