@@ -18,6 +18,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api/v1', '') : 'http://localhost:5000';
+
 // --- Sortable Lesson Component ---
 function SortableLesson({ lesson, moduleIndex, lessonIndex, onEdit, onDelete, onAddResource, onDeleteResource, onPreview }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: lesson._id });
@@ -53,7 +55,7 @@ function SortableLesson({ lesson, moduleIndex, lessonIndex, onEdit, onDelete, on
           if (!lesson.videoUrl) return;
           let url = lesson.videoUrl.replace(/\\/g, '/');
           if (url.startsWith('uploads/')) url = '/' + url;
-          onPreview(url.startsWith('/uploads') ? `http://localhost:5000${url}` : url);
+          onPreview(url.startsWith('/uploads') ? `${baseUrl}${url}` : url);
         }} className="p-1.5 text-brand-primary hover:bg-brand-primary/10 rounded-lg flex items-center gap-1 text-xs font-medium">
           <PlayCircle className="w-4 h-4" /> Preview
         </button>
@@ -73,7 +75,7 @@ function SortableLesson({ lesson, moduleIndex, lessonIndex, onEdit, onDelete, on
           <div className="flex flex-wrap gap-2">
             {lesson.resources.map(res => (
               <div key={res._id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-full">
-                <a href={`http://localhost:5000${res.fileUrl}`} target="_blank" rel="noreferrer" className="text-xs font-medium text-text-main hover:text-brand-primary truncate max-w-[150px]">
+                <a href={`${baseUrl}${res.fileUrl}`} target="_blank" rel="noreferrer" className="text-xs font-medium text-text-main hover:text-brand-primary truncate max-w-[150px]">
                   {res.title}
                 </a>
                 <button onClick={() => onDeleteResource(lesson._id, res._id)} className="text-gray-400 hover:text-red-500 transition-colors">
