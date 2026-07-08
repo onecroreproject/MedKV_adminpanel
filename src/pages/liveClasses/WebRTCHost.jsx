@@ -25,6 +25,9 @@ export default function WebRTCHost() {
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
+  const [activeTab, setActiveTab] = useState('chat');
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [toastMessage, setToastMessage] = useState(null);
   
   const [participants, setParticipants] = useState([
     { id: user._id || 'local', name: user.name + (isTeacher ? ' (Teacher)' : ' (You)'), role: user.role }
@@ -100,8 +103,12 @@ export default function WebRTCHost() {
     };
 
     webrtcService.onHandRaise = (data) => {
-      console.log('Hand raised by', data.name);
-      setMessages(prev => [...prev, { senderId: 'system', name: 'System', role: 'system', message: `${data.name} raised hand!`, timestamp: new Date() }]);
+      setToastMessage({ name: data.name, show: true });
+      setTimeout(() => setToastMessage(null), 4000);
+    };
+
+    webrtcService.onParticipantMediaState = (data) => {
+      setParticipants(prev => prev.map(p => p.id === data.socketId ? { ...p, isMuted: data.isMuted, isVideoOff: data.isVideoOff } : p));
     };
 
     if (isTeacher) {
@@ -202,7 +209,11 @@ export default function WebRTCHost() {
   };
 
   const leaveRoom = () => {
-    webrtcService.disconnect();
+    if (isTeacher) {
+      webrtcService.endClass();
+    } else {
+      webrtcService.disconnect();
+    }
     if (stream) stream.getTracks().forEach(t => t.stop());
     navigate(-1);
   };
@@ -275,10 +286,33 @@ export default function WebRTCHost() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-slate-900 text-white">
+    <div className="flex flex-col h-screen bg-slate-900 text-white relative">
+      {/* Toast Notification */}
+      {toastMessage && toastMessage.show && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-accent text-white px-6 py-3 rounded-lg shadow-2xl flex items-center gap-3 animate-bounce z-50">
+          <Hand size={24} />
+          <span className="font-bold text-lg">{toastMessage.name} raised their hand!</span>
+        </div>
+      )}
+
       {/* Header */}
       <header className="flex justify-between items-center px-6 py-3 bg-slate-800 border-b border-slate-700">
-        <h1 className="font-bold text-lg">Classroom {isRecording && <span className="text-red-500 ml-2 animate-pulse">● Recording</span>}</h1>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+             <div className="bg-primary text-white font-bold px-3 py-1 rounded flex items-center justify-center">
+                Edu
+             </div>
+             <h1 className="font-bold text-lg">Classroom {isRecording && <span className="text-red-500 ml-2 animate-pulse">● Recording</span>}</h1>
+          </div>
+          <div className="h-6 w-px bg-slate-600 mx-2"></div>
+          <div className="flex items-center gap-3">
+             <img src={user.profilePicture || "https://ui-avatars.com/api/?name=" + user.name + "&background=random"} alt="Host" className="w-9 h-9 rounded-full border border-slate-500" />
+             <div className="flex flex-col">
+               <span className="font-medium text-sm leading-tight">{user.name}</span>
+               <span className="text-xs text-slate-400">Host</span>
+             </div>
+          </div>
+        </div>
         <div className="flex gap-4 items-center">
           <span className="text-sm bg-slate-700 px-3 py-1 rounded-full">{participants.length} Participants</span>
         </div>
@@ -319,46 +353,114 @@ export default function WebRTCHost() {
                 </div>
              )}
              
-             {isTeacher && Object.keys(remoteStreams).map(socketId => (
-                <div key={socketId} className="w-48 bg-black rounded-lg overflow-hidden relative border border-slate-600">
-                  <video 
-                    autoPlay 
-                    playsInline 
-                    className="w-full h-full object-cover" 
-                    ref={el => { if (el) el.srcObject = remoteStreams[socketId] }} 
-                  />
-                  <span className="absolute bottom-1 left-1 bg-black/60 text-xs px-1 rounded">Student</span>
-                </div>
-             ))}
+             {isTeacher && Object.keys(remoteStreams).map(socketId => {
+                const participant = participants.find(p => p.id === socketId);
+                return (
+                  <div key={socketId} className="w-48 bg-black rounded-lg overflow-hidden relative border border-slate-600">
+                    <video 
+                      autoPlay 
+                      playsInline 
+                      className="w-full h-full object-cover" 
+                      ref={el => { if (el) el.srcObject = remoteStreams[socketId] }} 
+                    />
+                    <span className="absolute bottom-1 left-1 bg-black/60 text-xs px-1.5 py-0.5 rounded">
+                      {participant ? participant.name : 'Student'}
+                    </span>
+                  </div>
+                );
+             })}
           </div>
         </div>
 
         {/* Sidebar (Chat / Participants) */}
         {chatOpen && (
           <div className="w-80 bg-slate-800 border-l border-slate-700 flex flex-col">
-            <div className="p-4 border-b border-slate-700 font-bold">Class Chat</div>
-            
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((m, i) => (
-                <div key={i} className={`flex flex-col ${m.senderId === 'system' ? 'text-center text-accent text-xs' : 'text-left'}`}>
-                  {m.senderId !== 'system' && <span className="text-xs text-slate-400 mb-1">{m.name}</span>}
-                  <div className={`${m.senderId === 'system' ? 'bg-transparent' : (m.senderId === webrtcService.socket?.id ? 'bg-primary self-end' : 'bg-slate-700 self-start')} px-3 py-2 rounded-lg text-sm inline-block max-w-[85%]`}>
-                    {m.message}
-                  </div>
-                </div>
-              ))}
+            <div className="flex border-b border-slate-700">
+              <button 
+                onClick={() => setActiveTab('chat')} 
+                className={`flex-1 p-3 font-bold text-center transition text-sm ${activeTab === 'chat' ? 'bg-slate-700 border-b-2 border-primary text-white' : 'text-slate-400 hover:bg-slate-750'}`}
+              >
+                Chat
+              </button>
+              <button 
+                onClick={() => setActiveTab('participants')} 
+                className={`flex-1 p-3 font-bold text-center transition text-sm ${activeTab === 'participants' ? 'bg-slate-700 border-b-2 border-primary text-white' : 'text-slate-400 hover:bg-slate-750'}`}
+              >
+                Participants
+              </button>
             </div>
+            
+            {activeTab === 'chat' ? (
+              <>
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {messages.map((m, i) => (
+                    <div key={i} className={`flex flex-col ${m.senderId === 'system' ? 'text-center text-accent text-xs' : 'text-left'}`}>
+                      {m.senderId !== 'system' && <span className="text-xs text-slate-400 mb-1">{m.name}</span>}
+                      <div className={`${m.senderId === 'system' ? 'bg-transparent' : (m.senderId === webrtcService.socket?.id ? 'bg-primary self-end' : 'bg-slate-700 self-start')} px-3 py-2 rounded-lg text-sm inline-block max-w-[85%]`}>
+                        {m.message}
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
-            <form onSubmit={sendChat} className="p-4 border-t border-slate-700 flex gap-2">
-              <input 
-                type="text" 
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                placeholder="Type a message..."
-                className="flex-1 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
-              />
-              <button type="submit" className="bg-primary hover:bg-primary-hover px-3 py-2 rounded transition">Send</button>
-            </form>
+                <form onSubmit={sendChat} className="p-4 border-t border-slate-700 flex gap-2">
+                  <input 
+                    type="text" 
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    placeholder="Type a message..."
+                    className="flex-1 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+                  />
+                  <button type="submit" className="bg-primary hover:bg-primary-hover px-3 py-2 rounded transition">Send</button>
+                </form>
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="p-3 flex gap-2 border-b border-slate-700 flex-wrap">
+                  <button onClick={() => setActiveFilter('all')} className={`px-3 py-1 text-xs rounded-full font-medium ${activeFilter === 'all' ? 'bg-primary text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'} transition`}>All</button>
+                  <button onClick={() => setActiveFilter('muted')} className={`px-3 py-1 text-xs rounded-full font-medium ${activeFilter === 'muted' ? 'bg-red-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'} transition`}>Muted</button>
+                  <button onClick={() => setActiveFilter('camera-off')} className={`px-3 py-1 text-xs rounded-full font-medium ${activeFilter === 'camera-off' ? 'bg-red-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'} transition`}>Cam Off</button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                  {participants.filter(p => {
+                    if (activeFilter === 'muted') return p.isMuted;
+                    if (activeFilter === 'camera-off') return p.isVideoOff;
+                    return true;
+                  }).map(p => (
+                    <div key={p.id} className="flex items-center justify-between bg-slate-750 p-3 rounded-lg border border-slate-700 shadow-sm">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm">
+                          {p.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-sm truncate font-medium">{p.name}</span>
+                      </div>
+                      
+                      {p.role === 'student' && (
+                        <div className="flex gap-2">
+                          {!p.isMuted ? (
+                            <button onClick={() => webrtcService.muteParticipant(p.id)} className="p-1.5 bg-slate-600 hover:bg-red-500 rounded text-slate-300 transition" title="Force Mute">
+                              <MicOff size={14} />
+                            </button>
+                          ) : (
+                            <span className="p-1.5 text-red-400" title="Muted"><MicOff size={14} /></span>
+                          )}
+                          
+                          <button onClick={() => webrtcService.kickParticipant(p.id)} className="p-1.5 bg-slate-600 hover:bg-red-500 rounded text-slate-300 transition" title="Remove Participant">
+                            <PhoneOff size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {participants.length === 1 && (
+                    <div className="text-center text-slate-400 text-sm mt-10">
+                      No students have joined yet.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
