@@ -260,7 +260,8 @@ export default function WebRTCHost() {
       webrtcService.disconnect();
     }
     if (stream) stream.getTracks().forEach(t => t.stop());
-    navigate(-1);
+    window.close();
+    setTimeout(() => navigate(-1), 300);
   };
 
   const sendChat = (e) => {
