@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { webrtcService } from '../../services/webrtcService';
-import { Mic, MicOff, Video, VideoOff, MonitorUp, SquareSquare, PhoneOff, MessageSquare, Hand, Users, Circle, Square } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, MonitorUp, SquareSquare, PhoneOff, MessageSquare, Hand, Users, Circle, Square, Maximize, Minimize } from 'lucide-react';
 import axios from 'axios';
+import darkLogo from '../../assets/logos/dark_logo_transparent.png';
 
 export default function WebRTCHost() {
   const { roomId } = useParams();
@@ -29,9 +30,23 @@ export default function WebRTCHost() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [toastMessage, setToastMessage] = useState(null);
   
+  const mainVideoWrapperRef = useRef(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  
   const [participants, setParticipants] = useState([
     { id: user._id || 'local', name: user.name + (isTeacher ? ' (Teacher)' : ' (You)'), role: user.role }
   ]);
+  const [waitingParticipants, setWaitingParticipants] = useState([]);
+
+  const admitParticipant = (id) => {
+    webrtcService.admitStudent(id);
+    setWaitingParticipants(prev => prev.filter(w => w.socketId !== id));
+  };
+
+  const admitAll = () => {
+    webrtcService.admitAll();
+    setWaitingParticipants([]);
+  };
 
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
@@ -39,6 +54,28 @@ export default function WebRTCHost() {
 
   const myVideoRef = useRef();
   const mainVideoRef = useRef(); // Usually the teacher's video for students
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      if (mainVideoWrapperRef.current?.requestFullscreen) {
+        mainVideoWrapperRef.current.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   useEffect(() => {
     // 1. Get local media for lobby preview
@@ -105,6 +142,14 @@ export default function WebRTCHost() {
     webrtcService.onHandRaise = (data) => {
       setToastMessage({ name: data.name, show: true });
       setTimeout(() => setToastMessage(null), 4000);
+    };
+
+    webrtcService.onStudentWaiting = (data) => {
+      setWaitingParticipants(prev => {
+        // Prevent duplicates if multiple events fire
+        if (prev.find(p => p.socketId === data.socketId)) return prev;
+        return [...prev, data];
+      });
     };
 
     webrtcService.onParticipantMediaState = (data) => {
@@ -291,7 +336,7 @@ export default function WebRTCHost() {
       {toastMessage && toastMessage.show && (
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-accent text-white px-6 py-3 rounded-lg shadow-2xl flex items-center gap-3 animate-bounce z-50">
           <Hand size={24} />
-          <span className="font-bold text-lg">{toastMessage.name} raised their hand!</span>
+          <span className="font-bold text-lg">{toastMessage.name || 'A student'} raised their hand!</span>
         </div>
       )}
 
@@ -299,9 +344,7 @@ export default function WebRTCHost() {
       <header className="flex justify-between items-center px-6 py-3 bg-slate-800 border-b border-slate-700">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
-             <div className="bg-primary text-white font-bold px-3 py-1 rounded flex items-center justify-center">
-                Edu
-             </div>
+             <img src={darkLogo} alt="Logo" className="h-8 object-contain" />
              <h1 className="font-bold text-lg">Classroom {isRecording && <span className="text-red-500 ml-2 animate-pulse">● Recording</span>}</h1>
           </div>
           <div className="h-6 w-px bg-slate-600 mx-2"></div>
@@ -325,47 +368,60 @@ export default function WebRTCHost() {
         <div className="flex-1 flex flex-col p-4 relative">
           
           {/* Main Video View (Teacher for Students, or Active Speaker) */}
-          <div className="flex-1 bg-black rounded-xl overflow-hidden relative border border-slate-700">
-            {isTeacher ? (
-               // Teacher sees their own main video
-               <video 
-                 ref={el => {
-                   myVideoRef.current = el;
-                   if (el && stream) el.srcObject = stream;
-                 }} 
-                 autoPlay playsInline muted className="w-full h-full object-contain" 
-               />
-            ) : (
-               // Student sees the teacher's video
-               <video ref={mainVideoRef} autoPlay playsInline className="w-full h-full object-contain" />
-            )}
-            <div className="absolute bottom-4 left-4 bg-black/60 px-3 py-1 rounded-md text-sm">
-              {isTeacher ? 'You (Broadcasting)' : 'Teacher'}
-            </div>
+          <div ref={mainVideoWrapperRef} className="flex-1 bg-black rounded-xl overflow-hidden relative border border-slate-700">
+             {isTeacher ? (
+                // Teacher sees their own main video
+                <video 
+                  ref={el => {
+                    myVideoRef.current = el;
+                    if (el && stream) el.srcObject = stream;
+                  }} 
+                  autoPlay playsInline muted className="w-full h-full object-contain" 
+                />
+             ) : (
+                // Student sees the teacher's video
+                <video ref={mainVideoRef} autoPlay playsInline className="w-full h-full object-contain" />
+             )}
+             <div className="absolute bottom-4 left-4 bg-black/60 px-3 py-1 rounded-md text-sm">
+               {isTeacher ? 'You (Broadcasting)' : 'Teacher'}
+             </div>
+             <button 
+               onClick={toggleFullscreen} 
+               className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black/80 rounded-md transition text-slate-300 hover:text-white"
+               title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+             >
+               {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+             </button>
           </div>
 
           {/* Picture in Picture / Grid of other students (Only for Teacher mainly, or self view for student) */}
-          <div className="flex gap-2 mt-4 overflow-x-auto pb-2 h-32">
+          <div className="flex gap-2 mt-4 overflow-x-auto pb-2 h-36">
              {!isTeacher && (
-                <div className="w-48 bg-black rounded-lg overflow-hidden relative border border-slate-600">
-                  <video ref={myVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                  <span className="absolute bottom-1 left-1 bg-black/60 text-xs px-1 rounded">You</span>
+                <div className="w-48 flex flex-col bg-slate-800 rounded-lg overflow-hidden border border-slate-600 shadow-lg">
+                  <div className="flex-1 bg-black relative">
+                    <video ref={myVideoRef} autoPlay playsInline muted className="w-full h-full absolute inset-0 object-cover" />
+                  </div>
+                  <div className="px-2 py-1.5 text-center text-xs text-slate-300 font-medium truncate bg-slate-800 border-t border-slate-700">
+                    You
+                  </div>
                 </div>
              )}
              
              {isTeacher && Object.keys(remoteStreams).map(socketId => {
                 const participant = participants.find(p => p.id === socketId);
                 return (
-                  <div key={socketId} className="w-48 bg-black rounded-lg overflow-hidden relative border border-slate-600">
-                    <video 
-                      autoPlay 
-                      playsInline 
-                      className="w-full h-full object-cover" 
-                      ref={el => { if (el) el.srcObject = remoteStreams[socketId] }} 
-                    />
-                    <span className="absolute bottom-1 left-1 bg-black/60 text-xs px-1.5 py-0.5 rounded">
+                  <div key={socketId} className="w-48 flex flex-col bg-slate-800 rounded-lg overflow-hidden border border-slate-600 shadow-lg">
+                    <div className="flex-1 bg-black relative">
+                      <video 
+                        autoPlay 
+                        playsInline 
+                        className="w-full h-full absolute inset-0 object-cover" 
+                        ref={el => { if (el) el.srcObject = remoteStreams[socketId] }} 
+                      />
+                    </div>
+                    <div className="px-2 py-1.5 text-center text-xs text-slate-300 font-medium truncate bg-slate-800 border-t border-slate-700">
                       {participant ? participant.name : 'Student'}
-                    </span>
+                    </div>
                   </div>
                 );
              })}
@@ -422,6 +478,34 @@ export default function WebRTCHost() {
                   <button onClick={() => setActiveFilter('camera-off')} className={`px-3 py-1 text-xs rounded-full font-medium ${activeFilter === 'camera-off' ? 'bg-red-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'} transition`}>Cam Off</button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                  {waitingParticipants.length > 0 && (
+                    <div className="mb-6">
+                      <div className="flex justify-between items-center mb-3 px-1 border-b border-slate-700 pb-2">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Waiting Room ({waitingParticipants.length})</h3>
+                        <button onClick={admitAll} className="text-xs bg-primary hover:bg-primary-hover text-white px-2 py-1 rounded transition">Admit All</button>
+                      </div>
+                      <div className="space-y-2">
+                        {waitingParticipants.map(wp => (
+                          <div key={wp.socketId} className="flex items-center justify-between bg-slate-750 p-2.5 rounded-lg border border-slate-700 shadow-sm opacity-80">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                              <div className="w-7 h-7 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs">
+                                {wp.name.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="text-sm truncate font-medium">{wp.name}</span>
+                            </div>
+                            <button onClick={() => admitParticipant(wp.socketId)} className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-xs rounded transition">
+                              Admit
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="px-1 mb-2 mt-4 border-b border-slate-700 pb-2">
+                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">In Class ({participants.length})</h3>
+                  </div>
+
                   {participants.filter(p => {
                     if (activeFilter === 'muted') return p.isMuted;
                     if (activeFilter === 'camera-off') return p.isVideoOff;

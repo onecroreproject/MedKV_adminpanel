@@ -18,6 +18,7 @@ class WebRTCService {
     this.onForceKick = null;
     this.onForceMute = null;
     this.onParticipantMediaState = null;
+    this.onStudentWaiting = null;
     this.userName = '';
   }
 
@@ -52,6 +53,22 @@ class WebRTCService {
     this.socket.on('student-raised-hand', (data) => {
       if (this.onHandRaise) this.onHandRaise(data);
     });
+
+    this.socket.on('student-waiting', (data) => {
+      if (this.onStudentWaiting) this.onStudentWaiting(data);
+    });
+  }
+
+  admitStudent(socketId) {
+    if (this.socket) {
+      this.socket.emit('admit-student', { targetId: socketId });
+    }
+  }
+
+  admitAll() {
+    if (this.socket) {
+      this.socket.emit('admit-all');
+    }
   }
 
   initTeacher(stream, onStudentJoined) {

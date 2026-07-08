@@ -92,12 +92,14 @@ import SEOEditor from './pages/seo/SEOEditor';
 
 import ProtectedRoute from './components/common/ProtectedRoute';
 import WebRTCHost from './pages/liveClasses/WebRTCHost';
+import WebRTCHostMock from './pages/liveClasses/WebRTCHostMock';
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/webrtc-host/:roomId" element={<ProtectedRoute role="admin"><WebRTCHost /></ProtectedRoute>} />
+        <Route path="/hostlive" element={<WebRTCHostMock />} />
         {/* Public Auth Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/register" element={<AdminRegister />} />
