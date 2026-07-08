@@ -32,7 +32,7 @@ const menuItems = [
   //{ name: 'Ads Management', path: '/ads', icon: Layout },
   { name: 'Enquiries / Leads', path: '/enquiries', icon: Users },
   { name: 'Support Tickets', path: '/tickets', icon: HelpCircle },
-  { name: 'Admins & Roles', path: '/admins', icon: ShieldCheck },
+  // { name: 'Admins & Roles', path: '/admins', icon: ShieldCheck },
   { name: 'Settings', path: '/settings', icon: Settings },
   { name: 'Profile', path: '/profile', icon: User },
 ];

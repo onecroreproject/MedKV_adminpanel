@@ -60,6 +60,7 @@ export default function AddCourse() {
           
           setValue('title', course.title);
           setValue('category', course.category?._id || course.category);
+          setValue('languages', course.languages || []);
           setValue('fullDesc', course.description);
           setValue('difficulty', course.level || '');
           setValue('regularPrice', course.originalPrice || course.price);
@@ -136,6 +137,7 @@ export default function AddCourse() {
         description: data.fullDesc || data.shortDesc || '',
         category: data.category || undefined,
         level: data.difficulty || '',
+        languages: data.languages || [],
         price: finalPrice || 0,
         originalPrice: finalOriginalPrice || 0,
         previewVideoUrl: data.previewVideoUrl || '',
@@ -240,6 +242,23 @@ export default function AddCourse() {
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-text-main mb-3">Languages</label>
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" value="English" {...register('languages')} className="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
+                    <span className="text-sm text-text-main">English</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" value="Tamil" {...register('languages')} className="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
+                    <span className="text-sm text-text-main">Tamil</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" value="Hindi" {...register('languages')} className="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
+                    <span className="text-sm text-text-main">Hindi</span>
+                  </label>
+                </div>
+              </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-text-main mb-1.5">Short Description</label>
                 <textarea {...register('shortDesc')} rows={2} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20" placeholder="Brief summary of the course..." />
@@ -258,12 +277,7 @@ export default function AddCourse() {
                   <option value="All Levels">All Levels</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-text-main mb-1.5">Language</label>
-                <select {...register('language')} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20">
-                  <option value="english">English</option>
-                </select>
-              </div>
+
             </div>
           </div>
         );

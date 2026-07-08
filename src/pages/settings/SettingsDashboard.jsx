@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Globe, Phone, Share2, Shield, History, Upload, Save, CheckCircle, Activity, Users, AlertCircle, Clock, Lock, FileText } from 'lucide-react';
 import SecuritySettings from './SecuritySettings';
 import { getSettings, updateSettings } from '../../services/settingsService';
+import { uploadFile } from '../../services/uploadService';
+import default_icon_logo from '../../assets/logos/dark_logo_transparent.png';
+import default_name_logo from '../../assets/logos/company_name_transparent.png';
 
 export default function SettingsDashboard() {
   const [activeTab, setActiveTab] = useState('general');
@@ -52,6 +55,25 @@ export default function SettingsDashboard() {
         [field]: value
       }
     }));
+  };
+
+  const handleFileUpload = async (field, event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      // Show uploading state (could add dedicated state for each if needed)
+      setIsSaving(true);
+      const data = await uploadFile(file);
+      if (data.success && data.url) {
+        handleChange('general', field, data.url);
+      }
+    } catch (error) {
+      console.error(`Failed to upload ${field}:`, error);
+      alert(`Failed to upload image. Please try again.`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const tabs = [
@@ -133,21 +155,68 @@ export default function SettingsDashboard() {
                   </div>
 
                   <div className="pt-2">
-                    <label className="block text-sm font-medium text-text-main mb-1.5">Logo Upload (Navbar)</label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-6 flex flex-col items-center justify-center hover:border-brand-primary hover:bg-brand-primary/5 cursor-pointer transition-colors text-center">
-                      <Upload className="w-6 h-6 text-brand-primary/50 mb-2" />
-                      <span className="text-sm font-medium text-text-main">Drag & Drop or Click to upload Logo</span>
+                    <label className="block text-sm font-medium text-text-main mb-1.5">Icon Logo (Emblem)</label>
+                    <label className="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-6 flex flex-col items-center justify-center hover:border-brand-primary hover:bg-brand-primary/5 cursor-pointer transition-colors text-center relative group block">
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload('logoUrl', e)} />
+                      {settings.general.logoUrl || default_icon_logo ? (
+                        <div className="flex flex-col items-center">
+                          <img 
+                            src={settings.general.logoUrl || default_icon_logo} 
+                            alt="Current Icon Logo" 
+                            className="h-16 w-auto object-contain mb-3 opacity-90 group-hover:opacity-100 transition-opacity" 
+                          />
+                          <span className="text-sm font-medium text-brand-primary">Click to change Icon Logo</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-brand-primary/50 mb-2" />
+                          <span className="text-sm font-medium text-text-main">Drag & Drop or Click to upload Icon</span>
+                        </>
+                      )}
+                      <span className="text-xs text-gray-400 mt-1">Recommended size: 64x64px (PNG/SVG)</span>
+                    </label>
+                  </div>
+
+                  <div className="pt-2">
+                    <label className="block text-sm font-medium text-text-main mb-1.5">Name Logo (Typography)</label>
+                    <label className="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-6 flex flex-col items-center justify-center hover:border-brand-primary hover:bg-brand-primary/5 cursor-pointer transition-colors text-center relative group block">
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload('nameLogoUrl', e)} />
+                      {settings.general.nameLogoUrl || default_name_logo ? (
+                        <div className="flex flex-col items-center">
+                          <img 
+                            src={settings.general.nameLogoUrl || default_name_logo} 
+                            alt="Current Name Logo" 
+                            className="h-8 w-auto object-contain mb-3 opacity-90 group-hover:opacity-100 transition-opacity" 
+                          />
+                          <span className="text-sm font-medium text-brand-primary">Click to change Name Logo</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-brand-primary/50 mb-2" />
+                          <span className="text-sm font-medium text-text-main">Drag & Drop or Click to upload Typography</span>
+                        </>
+                      )}
                       <span className="text-xs text-gray-400 mt-1">Recommended size: 240x60px (PNG/SVG)</span>
-                    </div>
+                    </label>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-text-main mb-1.5">Favicon Upload</label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-6 flex flex-col items-center justify-center hover:border-brand-primary hover:bg-brand-primary/5 cursor-pointer transition-colors text-center">
-                      <Upload className="w-6 h-6 text-brand-primary/50 mb-2" />
-                      <span className="text-sm font-medium text-text-main">Upload Favicon (.ico or .png)</span>
+                    <label className="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-6 flex flex-col items-center justify-center hover:border-brand-primary hover:bg-brand-primary/5 cursor-pointer transition-colors text-center block">
+                      <input type="file" accept=".ico,.png,image/*" className="hidden" onChange={(e) => handleFileUpload('faviconUrl', e)} />
+                      {settings.general.faviconUrl ? (
+                         <div className="flex flex-col items-center">
+                           <img src={settings.general.faviconUrl} alt="Favicon" className="w-8 h-8 mb-3" />
+                           <span className="text-sm font-medium text-brand-primary">Click to change Favicon</span>
+                         </div>
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-brand-primary/50 mb-2" />
+                          <span className="text-sm font-medium text-text-main">Upload Favicon (.ico or .png)</span>
+                        </>
+                      )}
                       <span className="text-xs text-gray-400 mt-1">Recommended size: 32x32px</span>
-                    </div>
+                    </label>
                   </div>
                 </div>
 
@@ -157,10 +226,16 @@ export default function SettingsDashboard() {
                   {/* Mock Navbar */}
                   <div className="bg-bg-sidebar px-4 py-3 rounded-t-lg flex items-center justify-between border-b border-gray-800">
                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded bg-brand-primary text-white flex items-center justify-center font-bold text-[10px]">
-                          {settings.general.websiteName ? settings.general.websiteName.substring(0, 2).toUpperCase() : 'SR'}
-                        </div>
-                        <span className="text-white text-sm font-bold truncate max-w-[120px]">{settings.general.websiteName}</span>
+                        <img 
+                           src={settings.general.logoUrl || default_icon_logo} 
+                           alt="Icon Preview" 
+                           className="h-6 w-auto object-contain" 
+                        />
+                        <img 
+                           src={settings.general.nameLogoUrl || default_name_logo} 
+                           alt="Name Preview" 
+                           className="h-4 w-auto object-contain hidden sm:block" 
+                        />
                      </div>
                      <div className="flex gap-2">
                        <div className="w-4 h-4 bg-gray-700 rounded-full"></div>

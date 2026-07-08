@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Download, MoreVertical, Search, Filter, BookOpen, Users, DollarSign, Edit, Trash2, Eye } from 'lucide-react';
 import Badge from '../../components/common/Badge';
 import { getCourses, deleteCourse } from '../../services/courseService';
+import { getCategories } from '../../services/categoryService';
 
 export default function CourseList() {
   const navigate = useNavigate();
@@ -11,10 +12,21 @@ export default function CourseList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     fetchCourses();
+    fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await getCategories();
+      setCategories(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    }
+  };
 
 
   const fetchCourses = async () => {
@@ -98,9 +110,9 @@ export default function CourseList() {
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary min-w-[150px]">
             <option value="">Category</option>
-            <option value="FRCR Part 1">FRCR Part 1</option>
-            <option value="FRCR Part 2A">FRCR Part 2A</option>
-            <option value="Anatomy">Anatomy</option>
+            {categories.map(cat => (
+              <option key={cat._id} value={cat.name}>{cat.name}</option>
+            ))}
           </select>
           <select 
             value={statusFilter}
@@ -110,9 +122,6 @@ export default function CourseList() {
             <option value="Published">Published</option>
             <option value="Draft">Draft</option>
           </select>
-          <button className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 bg-gray-50 text-text-main rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors">
-            <Filter className="w-4 h-4" /> More Filters
-          </button>
         </div>
       </div>
 
