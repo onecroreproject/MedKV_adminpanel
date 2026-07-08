@@ -23,7 +23,7 @@ export default function WebRTCHost() {
   const [hasJoined, setHasJoined] = useState(false);
   const [mediaError, setMediaError] = useState('');
   
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('chat');
@@ -489,9 +489,9 @@ export default function WebRTCHost() {
                           <div key={wp.socketId} className="flex items-center justify-between bg-slate-750 p-2.5 rounded-lg border border-slate-700 shadow-sm opacity-80">
                             <div className="flex items-center gap-3 overflow-hidden">
                               <div className="w-7 h-7 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs">
-                                {wp.name.charAt(0).toUpperCase()}
+                                {wp.name ? wp.name.charAt(0).toUpperCase() : '?'}
                               </div>
-                              <span className="text-sm truncate font-medium">{wp.name}</span>
+                              <span className="text-sm truncate font-medium">{wp.name || 'Unknown'}</span>
                             </div>
                             <button onClick={() => admitParticipant(wp.socketId)} className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-xs rounded transition">
                               Admit
@@ -514,9 +514,9 @@ export default function WebRTCHost() {
                     <div key={p.id} className="flex items-center justify-between bg-slate-750 p-3 rounded-lg border border-slate-700 shadow-sm">
                       <div className="flex items-center gap-3 overflow-hidden">
                         <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm">
-                          {p.name.charAt(0).toUpperCase()}
+                          {p.name ? p.name.charAt(0).toUpperCase() : '?'}
                         </div>
-                        <span className="text-sm truncate font-medium">{p.name}</span>
+                        <span className="text-sm truncate font-medium">{p.name || 'Unknown'}</span>
                       </div>
                       
                       {p.role === 'student' && (

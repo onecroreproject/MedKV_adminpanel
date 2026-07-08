@@ -8,7 +8,7 @@ export default function WebRTCHostMock() {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  
+  const [hasJoined, setHasJoined] = useState(false);
   const [chatOpen, setChatOpen] = useState(true);
   const [messages, setMessages] = useState([
     { senderId: 'student1', name: 'Alice Smith', message: 'Hello teacher!' },
@@ -150,7 +150,7 @@ export default function WebRTCHostMock() {
                     <div className="flex-1 bg-slate-900 relative flex items-center justify-center">
                         {participant?.isVideoOff ? (
                              <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center font-bold text-lg">
-                                {participant.name.charAt(0)}
+                                {participant?.name?.charAt(0)}
                              </div>
                         ) : (
                             <img src={`https://ui-avatars.com/api/?name=${participant?.name}&background=random`} className="w-full h-full object-cover opacity-50" alt="" />
@@ -229,9 +229,9 @@ export default function WebRTCHostMock() {
                           <div key={wp.id} className="flex items-center justify-between bg-slate-750 p-2.5 rounded-lg border border-slate-700 shadow-sm opacity-80">
                             <div className="flex items-center gap-3 overflow-hidden">
                               <div className="w-7 h-7 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs">
-                                {wp.name.charAt(0).toUpperCase()}
+                                {wp.name ? wp.name.charAt(0).toUpperCase() : '?'}
                               </div>
-                              <span className="text-sm truncate font-medium">{wp.name}</span>
+                              <span className="text-sm truncate font-medium">{wp.name || 'Unknown'}</span>
                             </div>
                             <button onClick={() => admitParticipant(wp.id)} className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-xs rounded transition">
                               Admit
@@ -254,9 +254,9 @@ export default function WebRTCHostMock() {
                     <div key={p.id} className="flex items-center justify-between bg-slate-750 p-3 rounded-lg border border-slate-700 shadow-sm">
                       <div className="flex items-center gap-3 overflow-hidden">
                         <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm">
-                          {p.name.charAt(0).toUpperCase()}
+                          {p.name ? p.name.charAt(0).toUpperCase() : '?'}
                         </div>
-                        <span className="text-sm truncate font-medium">{p.name}</span>
+                        <span className="text-sm truncate font-medium">{p.name || 'Unknown'}</span>
                       </div>
                       
                       {p.role === 'student' && (
