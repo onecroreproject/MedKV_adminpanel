@@ -43,6 +43,7 @@ import CategoryList from './pages/categories/CategoryList';
 import LiveClassList from './pages/liveClasses/LiveClassList';
 import ScheduleClass from './pages/liveClasses/ScheduleClass';
 import ClassDetails from './pages/liveClasses/ClassDetails';
+import LiveMonitor from './pages/liveClasses/LiveMonitor';
 import RecordingList from './pages/recordings/RecordingList';
 import UploadRecording from './pages/recordings/UploadRecording';
 import RecordingDetails from './pages/recordings/RecordingDetails';
@@ -90,11 +91,13 @@ import SEODashboard from './pages/seo/SEODashboard';
 import SEOEditor from './pages/seo/SEOEditor';
 
 import ProtectedRoute from './components/common/ProtectedRoute';
+import WebRTCHost from './pages/liveClasses/WebRTCHost';
 
 function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/webrtc-host/:roomId" element={<ProtectedRoute role="admin"><WebRTCHost /></ProtectedRoute>} />
         {/* Public Auth Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/register" element={<AdminRegister />} />
@@ -130,6 +133,7 @@ function App() {
           {/* Live Classes Routes */}
           <Route path="live-classes" element={<LiveClassList />} />
           <Route path="live-classes/schedule" element={<ScheduleClass />} />
+          <Route path="live-classes/monitor" element={<LiveMonitor />} />
           <Route path="live-classes/edit/:id" element={<ScheduleClass />} />
           <Route path="live-classes/:id" element={<ClassDetails />} />
 

@@ -117,14 +117,14 @@ export default function ScheduleClass() {
   }, [id, reset]);
 
   const onSubmit = async (data) => {
-    if (!isLinkVerified) {
+    if (data.meetingProvider === 'zoom' && !isLinkVerified) {
       alert("Please verify the Zoom link first before scheduling.");
       return;
     }
 
     if (data.accessControl === 'course') {
-      if (!data.course || !data.courseModule || !data.lesson) {
-        alert("Course, Module, and Lesson details are mandatory when selecting 'Course Students Only'.");
+      if (!data.course || !data.courseModule) {
+        alert("Course and Module details are mandatory when selecting 'Course Students Only'.");
         return;
       }
     }
@@ -328,17 +328,27 @@ export default function ScheduleClass() {
         {/* Section 3 & 4 Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
-          {/* Section 3: Zoom Integration */}
+          {/* Section 3: Meeting Integration */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
               <LinkIcon className="w-5 h-5 text-brand-primary" />
-              <h3 className="font-bold text-text-main">3. Zoom Integration</h3>
+              <h3 className="font-bold text-text-main">3. Meeting Integration</h3>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-text-main mb-1.5">Zoom Meeting Link *</label>
-                <input {...register("zoomLink")} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20" placeholder="https://us02web.zoom.us/j/..." />
+                <label className="block text-sm font-medium text-text-main mb-1.5">Meeting Provider *</label>
+                <select {...register("meetingProvider")} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20">
+                  <option value="webrtc">Built-in WebRTC Classroom (Default)</option>
+                  <option value="zoom">Zoom Meeting (Fallback)</option>
+                </select>
               </div>
+              
+              {watch("meetingProvider") === 'zoom' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-text-main mb-1.5">Zoom Meeting Link *</label>
+                    <input {...register("zoomLink")} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20" placeholder="https://us02web.zoom.us/j/..." />
+                  </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-text-main mb-1.5">Meeting ID</label>
@@ -358,17 +368,19 @@ export default function ScheduleClass() {
                     ? 'border-emerald-500 text-emerald-600 bg-emerald-50 cursor-default'
                     : !zoomLinkValue 
                     ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
-                    : 'border-brand-primary text-brand-primary hover:bg-brand-primary/5'
+                    : 'border-brand-primary text-brand-primary hover:bg-brand-primary/5 bg-white'
                 }`}
               >
-                {isLinkVerified ? (
-                  <><CheckSquare className="w-4 h-4" /> Link Verified</>
-                ) : isVerifying ? (
-                  'Verifying...'
+                {isVerifying ? (
+                  <><span className="w-4 h-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></span> Verifying...</>
+                ) : isLinkVerified ? (
+                  <><CheckCircle className="w-4 h-4" /> Link Verified</>
                 ) : (
-                  'Verify Meeting Link'
+                  'Verify Zoom Link'
                 )}
               </button>
+              </>
+              )}
             </div>
           </div>
 

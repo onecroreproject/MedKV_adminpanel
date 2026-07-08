@@ -125,7 +125,9 @@ export default function ClassDetails() {
     try {
       await updateLiveClass(id, { status: 'Live Now' });
       fetchSession();
-      if (session.zoomLink) {
+      if (session.meetingProvider === 'webrtc') {
+        window.open(`/webrtc-host/${id}`, '_blank');
+      } else if (session.zoomLink) {
         const url = extractUrl(session.zoomLink);
         if (url) {
           window.open(url, '_blank');
@@ -249,39 +251,49 @@ export default function ClassDetails() {
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              {/* Zoom Details */}
+              {/* Meeting Details */}
               <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-                  <h3 className="font-bold text-text-main">Zoom Meeting Details</h3>
+                  <h3 className="font-bold text-text-main">
+                    {session.meetingProvider === 'webrtc' ? 'Built-in Classroom (WebRTC)' : 'Zoom Meeting Details'}
+                  </h3>
                 </div>
-                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-text-muted mb-1">Meeting Link</label>
-                    <div className="flex items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                      <span className="text-sm text-text-main font-medium truncate flex-1">{session.zoomLink || 'No link provided'}</span>
-                      <button 
-                        onClick={() => {
-                          if (session.zoomLink) {
-                            navigator.clipboard.writeText(session.zoomLink);
-                            alert('Copied to clipboard');
-                          }
-                        }}
-                        className="p-1.5 text-gray-400 hover:text-brand-primary transition-colors" 
-                        title="Copy Link"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
+                {session.meetingProvider === 'webrtc' ? (
+                  <div className="p-6">
+                    <p className="text-sm text-text-main bg-brand-primary/10 border border-brand-primary/20 p-4 rounded-lg">
+                      This class uses the Built-in WebRTC Classroom. Students and Faculty can join directly on the platform without external links.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-medium text-text-muted mb-1">Meeting Link</label>
+                      <div className="flex items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                        <span className="text-sm text-text-main font-medium truncate flex-1">{session.zoomLink || 'No link provided'}</span>
+                        <button 
+                          onClick={() => {
+                            if (session.zoomLink) {
+                              navigator.clipboard.writeText(session.zoomLink);
+                              alert('Copied to clipboard');
+                            }
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-brand-primary transition-colors" 
+                          title="Copy Link"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Meeting ID</label>
+                      <p className="text-sm font-medium text-text-main px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">{session.zoomId || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Passcode</label>
+                      <p className="text-sm font-medium text-text-main px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">{session.zoomPasscode || 'N/A'}</p>
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-text-muted mb-1">Meeting ID</label>
-                    <p className="text-sm font-medium text-text-main px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">{session.zoomId || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-text-muted mb-1">Passcode</label>
-                    <p className="text-sm font-medium text-text-main px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">{session.zoomPasscode || 'N/A'}</p>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 

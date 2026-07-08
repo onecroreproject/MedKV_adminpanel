@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Download, Calendar as CalendarIcon, Search, Filter, MoreVertical, Video, Clock, Eye, Trash2, Upload, PlayCircle, X, ExternalLink } from 'lucide-react';
+import { Plus, Download, Calendar as CalendarIcon, Search, Filter, MoreVertical, Video, Clock, Eye, Trash2, Upload, PlayCircle, X, ExternalLink, Activity } from 'lucide-react';
 import Badge from '../../components/common/Badge';
 import ImportModal from '../../components/common/ImportModal';
 import { getLiveClasses, deleteLiveClass, updateLiveClass } from '../../services/liveClassService';
@@ -89,7 +89,9 @@ export default function LiveClassList() {
     try {
       await updateLiveClass(session._id, { status: 'Live Now' });
       fetchSessions();
-      if (session.zoomLink) {
+      if (session.meetingProvider === 'webrtc') {
+        window.open(`/webrtc-host/${session._id}`, '_blank');
+      } else if (session.zoomLink) {
         const url = extractUrl(session.zoomLink);
         if (url) {
           window.open(url, '_blank');
@@ -194,6 +196,12 @@ export default function LiveClassList() {
             className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 bg-white text-text-main rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
           >
             <Download className="w-4 h-4" /> Export
+          </button>
+          <button 
+            onClick={() => navigate('/live-classes/monitor')} 
+            className="flex items-center gap-2 px-4 py-2 border border-brand-primary text-brand-primary rounded-lg text-sm font-medium hover:bg-brand-primary/5 transition-colors"
+          >
+            <Activity className="w-4 h-4" /> System Monitor
           </button>
           <button 
             onClick={() => navigate('/live-classes/schedule')}
@@ -313,9 +321,18 @@ export default function LiveClassList() {
                         <div className="flex items-center justify-end gap-2">
                           {session.status === 'Live Now' ? (
                             <>
-                              <a href={extractUrl(session.zoomLink) || '#'} onClick={(e) => { if(!session.zoomLink) { e.preventDefault(); alert('No Zoom link provided'); } }} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition-colors">
+                              <button 
+                                onClick={(e) => { 
+                                  if (session.meetingProvider === 'webrtc') {
+                                    window.open(`/webrtc-host/${session._id}`, '_blank');
+                                  } else {
+                                    if(!session.zoomLink) { e.preventDefault(); alert('No Zoom link provided'); } 
+                                    else { window.open(extractUrl(session.zoomLink), '_blank'); }
+                                  }
+                                }} 
+                                className="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition-colors">
                                 Join Now
-                              </a>
+                              </button>
                               <button onClick={() => handleEndSession(session._id)} className="px-3 py-1.5 border border-red-200 text-red-600 bg-red-50 rounded text-xs font-medium hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer">
                                 End
                               </button>
