@@ -16,7 +16,7 @@ export default function WebRTCHostMock() {
     { senderId: 'system', name: 'System', role: 'system', message: 'Alice Smith raised hand!' }
   ]);
   const [chatInput, setChatInput] = useState('');
-  const [activeTab, setActiveTab] = useState('chat');
+  const [activeTab, setActiveTab] = useState('participants');
   const [activeFilter, setActiveFilter] = useState('all');
   const [toastMessage, setToastMessage] = useState({ name: 'Alice Smith', show: true });
   
@@ -125,10 +125,17 @@ export default function WebRTCHostMock() {
           
           {/* Main Video View */}
           <div ref={mainVideoWrapperRef} className="flex-1 bg-slate-800 rounded-xl overflow-hidden relative border border-slate-700 flex items-center justify-center">
-             <div className="text-slate-500 flex flex-col items-center">
-                <VideoOff size={64} className="mb-4 opacity-50" />
-                <p>Your Video Feed Goes Here</p>
-             </div>
+             {isScreenSharing ? (
+               <div className="text-green-500 flex flex-col items-center animate-pulse">
+                  <MonitorUp size={64} className="mb-4" />
+                  <p className="font-bold text-lg">You are sharing your screen</p>
+               </div>
+             ) : (
+               <div className="text-slate-500 flex flex-col items-center">
+                  <VideoOff size={64} className="mb-4 opacity-50" />
+                  <p>Your Video Feed Goes Here</p>
+               </div>
+             )}
             <div className="absolute bottom-4 left-4 bg-black/60 px-3 py-1 rounded-md text-sm">
               You (Broadcasting)
             </div>
@@ -180,9 +187,14 @@ export default function WebRTCHostMock() {
               </button>
               <button 
                 onClick={() => setActiveTab('participants')} 
-                className={`flex-1 p-3 font-bold text-center transition text-sm ${activeTab === 'participants' ? 'bg-slate-700 border-b-2 border-primary text-white' : 'text-slate-400 hover:bg-slate-750'}`}
+                className={`flex-1 p-3 font-bold text-center transition-all duration-300 text-sm flex items-center justify-center gap-2 ${activeTab === 'participants' ? 'bg-slate-700 border-b-2 border-primary text-white' : 'text-slate-400 hover:bg-slate-750'}`}
               >
                 Participants
+                {waitingParticipants.length > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-bounce shadow-[0_0_8px_rgba(239,68,68,0.8)]">
+                    {waitingParticipants.length}
+                  </span>
+                )}
               </button>
             </div>
             
@@ -226,7 +238,7 @@ export default function WebRTCHostMock() {
                       </div>
                       <div className="space-y-2">
                         {waitingParticipants.map(wp => (
-                          <div key={wp.id} className="flex items-center justify-between bg-slate-750 p-2.5 rounded-lg border border-slate-700 shadow-sm opacity-80">
+                          <div key={wp.id} className="flex items-center justify-between bg-slate-750 p-2.5 rounded-lg border border-slate-700 shadow-sm opacity-80 hover:opacity-100 transition-all duration-300 transform hover:scale-[1.02]">
                             <div className="flex items-center gap-3 overflow-hidden">
                               <div className="w-7 h-7 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs">
                                 {wp.name ? wp.name.charAt(0).toUpperCase() : '?'}
@@ -251,7 +263,7 @@ export default function WebRTCHostMock() {
                     if (activeFilter === 'camera-off') return p.isVideoOff;
                     return true;
                   }).map(p => (
-                    <div key={p.id} className="flex items-center justify-between bg-slate-750 p-3 rounded-lg border border-slate-700 shadow-sm">
+                    <div key={p.id} className="flex items-center justify-between bg-slate-750 p-3 rounded-lg border border-slate-700 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5">
                       <div className="flex items-center gap-3 overflow-hidden">
                         <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm">
                           {p.name ? p.name.charAt(0).toUpperCase() : '?'}

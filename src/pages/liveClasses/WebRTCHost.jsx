@@ -5,6 +5,53 @@ import { Mic, MicOff, Video, VideoOff, MonitorUp, SquareSquare, PhoneOff, Messag
 import axios from 'axios';
 import darkLogo from '../../assets/logos/dark_logo_transparent.png';
 
+const playSound = (type) => {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+  const ctx = new AudioContext();
+
+  if (type === 'join') {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+    osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } else if (type === 'message') {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.1);
+  } else if (type === 'hand') {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(440, ctx.currentTime);
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  }
+};
+
 export default function WebRTCHost() {
   const { roomId } = useParams();
   const navigate = useNavigate();
@@ -26,7 +73,7 @@ export default function WebRTCHost() {
   const [chatOpen, setChatOpen] = useState(true);
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
-  const [activeTab, setActiveTab] = useState('chat');
+  const [activeTab, setActiveTab] = useState('participants');
   const [activeFilter, setActiveFilter] = useState('all');
   const [toastMessage, setToastMessage] = useState(null);
   
@@ -120,6 +167,9 @@ export default function WebRTCHost() {
 
     webrtcService.onChat = (data) => {
       setMessages(prev => [...prev, data]);
+      if (data.senderId !== user._id) {
+        playSound('message');
+      }
     };
 
     webrtcService.onTrack = (socketId, remoteStream) => {
@@ -140,6 +190,7 @@ export default function WebRTCHost() {
     };
 
     webrtcService.onHandRaise = (data) => {
+      playSound('hand');
       setToastMessage({ name: data.name, show: true });
       setTimeout(() => setToastMessage(null), 4000);
     };
@@ -148,6 +199,7 @@ export default function WebRTCHost() {
       setWaitingParticipants(prev => {
         // Prevent duplicates if multiple events fire
         if (prev.find(p => p.socketId === data.socketId)) return prev;
+        playSound('join');
         return [...prev, data];
       });
     };
@@ -223,26 +275,12 @@ export default function WebRTCHost() {
 
       mediaRecorderRef.current.onstop = async () => {
         const blob = new Blob(recordedChunks.current, { type: 'video/webm' });
-        const formData = new FormData();
-        formData.append('recording', blob, `recording-${roomId}.webm`);
-        formData.append('roomId', roomId);
-        formData.append('teacherId', user._id);
-        
-        try {
-          await axios.post(`${import.meta.env.VITE_API_URL}/webrtc/upload-recording`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
-          alert('Recording uploaded successfully!');
-        } catch (err) {
-          console.error("Failed to upload recording", err);
-          alert('Failed to upload recording to server.');
-          // Fallback: download locally
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `backup-recording-${roomId}.webm`;
-          a.click();
-        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `LiveClass_Recording_${roomId}_${new Date().toISOString()}.webm`;
+        a.click();
+        window.URL.revokeObjectURL(url);
       };
 
       mediaRecorderRef.current.start();
@@ -369,7 +407,13 @@ export default function WebRTCHost() {
         <div className="flex-1 flex flex-col p-4 relative">
           
           {/* Main Video View (Teacher for Students, or Active Speaker) */}
-          <div ref={mainVideoWrapperRef} className="flex-1 bg-black rounded-xl overflow-hidden relative border border-slate-700">
+          <div ref={mainVideoWrapperRef} className="flex-1 bg-black rounded-xl overflow-hidden relative border border-slate-700 flex items-center justify-center">
+             {isScreenSharing ? (
+               <div className="text-green-500 flex flex-col items-center animate-pulse z-10 bg-black/80 w-full h-full justify-center absolute inset-0">
+                  <MonitorUp size={64} className="mb-4" />
+                  <p className="font-bold text-lg">You are sharing your screen</p>
+               </div>
+             ) : null}
              {isTeacher ? (
                 // Teacher sees their own main video
                 <video 
@@ -377,7 +421,7 @@ export default function WebRTCHost() {
                     myVideoRef.current = el;
                     if (el && stream) el.srcObject = stream;
                   }} 
-                  autoPlay playsInline muted className="w-full h-full object-contain" 
+                  autoPlay playsInline muted className={`w-full h-full object-contain ${isScreenSharing ? 'opacity-0' : 'opacity-100'}`} 
                 />
              ) : (
                 // Student sees the teacher's video
@@ -441,9 +485,14 @@ export default function WebRTCHost() {
               </button>
               <button 
                 onClick={() => setActiveTab('participants')} 
-                className={`flex-1 p-3 font-bold text-center transition text-sm ${activeTab === 'participants' ? 'bg-slate-700 border-b-2 border-primary text-white' : 'text-slate-400 hover:bg-slate-750'}`}
+                className={`flex-1 p-3 font-bold text-center transition-all duration-300 text-sm flex items-center justify-center gap-2 ${activeTab === 'participants' ? 'bg-slate-700 border-b-2 border-primary text-white' : 'text-slate-400 hover:bg-slate-750'}`}
               >
                 Participants
+                {waitingParticipants.length > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-bounce shadow-[0_0_8px_rgba(239,68,68,0.8)]">
+                    {waitingParticipants.length}
+                  </span>
+                )}
               </button>
             </div>
             
@@ -487,7 +536,7 @@ export default function WebRTCHost() {
                       </div>
                       <div className="space-y-2">
                         {waitingParticipants.map(wp => (
-                          <div key={wp.socketId} className="flex items-center justify-between bg-slate-750 p-2.5 rounded-lg border border-slate-700 shadow-sm opacity-80">
+                          <div key={wp.socketId} className="flex items-center justify-between bg-slate-750 p-2.5 rounded-lg border border-slate-700 shadow-sm opacity-80 hover:opacity-100 transition-all duration-300 transform hover:scale-[1.02]">
                             <div className="flex items-center gap-3 overflow-hidden">
                               <div className="w-7 h-7 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs">
                                 {wp.name ? wp.name.charAt(0).toUpperCase() : '?'}
@@ -512,7 +561,7 @@ export default function WebRTCHost() {
                     if (activeFilter === 'camera-off') return p.isVideoOff;
                     return true;
                   }).map(p => (
-                    <div key={p.id} className="flex items-center justify-between bg-slate-750 p-3 rounded-lg border border-slate-700 shadow-sm">
+                    <div key={p.id} className="flex items-center justify-between bg-slate-750 p-3 rounded-lg border border-slate-700 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5">
                       <div className="flex items-center gap-3 overflow-hidden">
                         <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm">
                           {p.name ? p.name.charAt(0).toUpperCase() : '?'}

@@ -7,6 +7,7 @@ import { getLiveClasses, deleteLiveClass, updateLiveClass } from '../../services
 import { getRecordings } from '../../services/recordingService';
 import { exportToCSV } from '../../utils/exportUtils';
 import LiveClassCalendar from './LiveClassCalendar';
+import { io } from 'socket.io-client';
 
 export default function LiveClassList() {
   const navigate = useNavigate();
@@ -43,6 +44,15 @@ export default function LiveClassList() {
 
   useEffect(() => {
     fetchSessions();
+
+    const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api/v1', '') : 'http://localhost:5000';
+    const socket = io(baseUrl);
+    
+    socket.on('liveClassUpdate', () => {
+      fetchSessions();
+    });
+
+    return () => socket.disconnect();
   }, []);
 
   const fetchSessions = async () => {
@@ -214,6 +224,26 @@ export default function LiveClassList() {
 
       {view === 'list' ? (
         <>
+          {/* Global Metrics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+             <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col">
+               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Total Classes</p>
+               <p className="text-2xl font-bold text-slate-800">{sessions.length}</p>
+             </div>
+             <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col">
+               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Live Now</p>
+               <p className="text-2xl font-bold text-green-600">{sessions.filter(s => s.status?.toLowerCase() === 'live now').length}</p>
+             </div>
+             <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col">
+               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Scheduled</p>
+               <p className="text-2xl font-bold text-brand-primary">{sessions.filter(s => s.status?.toLowerCase() === 'scheduled').length}</p>
+             </div>
+             <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col">
+               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Total Participants</p>
+               <p className="text-2xl font-bold text-slate-800">{sessions.reduce((acc, curr) => acc + (curr.liveParticipants || 0), 0)}</p>
+             </div>
+          </div>
+
           {/* Filters Area */}
           <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col lg:flex-row gap-4">
             <div className="flex-1 relative">

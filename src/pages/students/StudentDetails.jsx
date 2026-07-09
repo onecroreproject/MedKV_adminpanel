@@ -6,11 +6,13 @@ import {
 } from 'lucide-react';
 import Badge from '../../components/common/Badge';
 import { getStudentById, sendMessageToStudent } from '../../services/studentService';
+import axios from 'axios';
 
 export default function StudentDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [studentData, setStudentData] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -43,6 +45,17 @@ export default function StudentDetails() {
         const response = await getStudentById(id);
         if (response.success) {
           setStudentData(response.data);
+          try {
+            const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+            const statsRes = await axios.get(`${import.meta.env.VITE_API_URL}/attendance/student/${id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (statsRes.data.success) {
+              setAnalytics(statsRes.data);
+            }
+          } catch (err) {
+            console.error('Failed to fetch analytics', err);
+          }
         } else {
           setError('Failed to fetch student details.');
         }
@@ -256,6 +269,53 @@ export default function StudentDetails() {
               )}
             </div>
           </div>
+
+          {/* Live Class Analytics */}
+          {analytics && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mt-6">
+              <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                <h3 className="font-bold text-text-main flex items-center gap-2"><Video className="w-4 h-4 text-brand-primary" /> Live Class Analytics</h3>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 text-center">
+                     <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Classes Attended</p>
+                     <p className="text-xl font-bold text-slate-800">{analytics.stats.totalClasses}</p>
+                   </div>
+                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 text-center">
+                     <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Watch Time</p>
+                     <p className="text-xl font-bold text-slate-800">{analytics.stats.totalDuration} min</p>
+                   </div>
+                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 text-center">
+                     <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Total Chats</p>
+                     <p className="text-xl font-bold text-slate-800">{analytics.stats.totalChats}</p>
+                   </div>
+                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 text-center">
+                     <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Hand Raises</p>
+                     <p className="text-xl font-bold text-slate-800">{analytics.stats.totalHandRaises}</p>
+                   </div>
+                </div>
+                
+                {analytics.history && analytics.history.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-bold text-sm text-text-main mb-2">Recent Classes</h4>
+                    {analytics.history.slice(0, 5).map((record) => (
+                      <div key={record._id} className="flex justify-between items-center border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition">
+                         <div>
+                            <p className="font-medium text-sm text-text-main">{record.liveClass?.title || 'Unknown Class'}</p>
+                            <p className="text-xs text-text-muted mt-0.5">{new Date(record.joinTime).toLocaleString()}</p>
+                         </div>
+                         <div className="text-right">
+                            <Badge status={record.status === 'Present' ? 'success' : 'danger'}>{record.status}</Badge>
+                            <p className="text-xs font-bold text-slate-500 mt-1">{record.duration} mins watched</p>
+                         </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Payment History */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
