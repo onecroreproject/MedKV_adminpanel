@@ -5,7 +5,7 @@ import { ArrowLeft, Plus, Edit, Trash2, CheckCircle, Package } from 'lucide-reac
 const mockPlans = [
   { id: 'PLAN-01', name: 'Monthly Plan', price: '$99', duration: '1 Month', features: ['Access to Basic Courses', 'Standard Support', 'Monthly Quiz Access'] },
   { id: 'PLAN-02', name: 'Quarterly Plan', price: '$249', duration: '3 Months', features: ['Access to All Courses', 'Priority Support', 'Quarterly Mock Exams', 'Downloadable Resources'] },
-  { id: 'PLAN-03', name: 'Annual Premium', price: '$899', duration: '12 Months', features: ['Full Platform Access', '1-on-1 Mentorship', 'All Mock Exams', 'Live Case Discussions', 'Certificate Generation'] },
+  { id: 'PLAN-03', name: 'Annual', price: '$899', duration: '12 Months', features: ['Full Platform Access', '1-on-1 Mentorship', 'All Mock Exams', 'Live Case Discussions', 'Certificate Generation'] },
 ];
 
 export default function SubscriptionPlans() {

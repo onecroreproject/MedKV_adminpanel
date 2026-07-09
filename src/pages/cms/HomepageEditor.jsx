@@ -8,7 +8,7 @@ export default function HomepageEditor() {
   const { register, handleSubmit, watch } = useForm({
     defaultValues: {
       heading: 'Master Radiology with Expert-Led Courses',
-      subheading: 'Join Dr. Sam Reefath Academy and elevate your clinical skills with our premium FRCR and Anatomy modules.',
+      subheading: 'Join Dr. Sam Reefath Academy and elevate your clinical skills with our FRCR and Anatomy modules.',
       btnPrimary: 'Explore Courses',
       btnSecondary: 'Join Free Trial'
     }

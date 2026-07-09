@@ -11,7 +11,11 @@ export default function ScheduleClass() {
   const navigate = useNavigate();
   const isEditMode = Boolean(id);
   const [existingSession, setExistingSession] = useState(null);
-  const { register, handleSubmit, getValues, watch, reset } = useForm();
+  const { register, handleSubmit, getValues, watch, reset } = useForm({
+    defaultValues: {
+      meetingProvider: 'zoom'
+    }
+  });
   const [courses, setCourses] = useState([]);
   const [facultyList, setFacultyList] = useState([]);
   const [modules, setModules] = useState([]);
@@ -105,11 +109,13 @@ export default function ScheduleClass() {
             time: data.time,
             duration: data.duration,
             zoomLink: data.zoomLink,
+            zoomLink: data.zoomLink,
             zoomId: data.zoomId,
             zoomPasscode: data.zoomPasscode,
             accessControl: data.accessControl || 'course',
             selectedStudents: data.selectedStudents || [],
-            settings: data.settings
+            settings: data.settings,
+            meetingProvider: data.meetingProvider || 'zoom'
           });
         }
       }).catch(err => console.error('Failed to fetch session', err));
@@ -338,8 +344,8 @@ export default function ScheduleClass() {
               <div>
                 <label className="block text-sm font-medium text-text-main mb-1.5">Meeting Provider *</label>
                 <select {...register("meetingProvider")} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20">
-                  <option value="webrtc">Built-in WebRTC Classroom (Default)</option>
-                  <option value="zoom">Zoom Meeting (Fallback)</option>
+                  <option value="zoom">Zoom Meeting (Default)</option>
+                  {/* WebRTC option hidden as per requirements */}
                 </select>
               </div>
               

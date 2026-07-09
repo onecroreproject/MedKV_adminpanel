@@ -16,7 +16,7 @@ export default function SubscriptionDetails() {
     student: 'Alice Johnson',
     email: 'alice.johnson@example.com',
     phone: '+44 7700 900077',
-    plan: 'Premium Membership',
+    plan: 'Membership',
     type: 'Annual',
     start: 'Oct 26, 2023',
     expiry: 'Oct 26, 2024',

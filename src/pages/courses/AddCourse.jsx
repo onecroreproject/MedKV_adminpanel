@@ -143,6 +143,7 @@ export default function AddCourse() {
         previewVideoUrl: data.previewVideoUrl || '',
         thumbnail: data.thumbnail || '',
         banner: data.banner || '',
+        duration: data.duration || 'lifetime',
         status: statusToSet,
         instructor: instructorId,
         learningOutcomes: data.learningOutcomes || [],

@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, FileText, ArrowRightLeft, User, CreditCard, Calendar, Hash, RefreshCcw } from 'lucide-react';
 import Badge from '../../components/common/Badge';
+import InvoiceModal from '../../components/common/InvoiceModal';
 
 export default function PaymentDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [showInvoice, setShowInvoice] = useState(false);
 
   const txnData = {
-    id: id || 'TXN-0941',
-    gateway: 'Stripe',
+    id: id || `pay_MIa${Math.random().toString(36).substring(2, 8).toLowerCase()}`,
+    gateway: 'Razorpay',
     student: 'Alice Johnson',
     email: 'alice.johnson@example.com',
     course: 'FRCR Part 2A Comprehensive',
@@ -31,10 +33,16 @@ export default function PaymentDetails() {
           <ArrowLeft className="w-4 h-4" /> Back to Payments
         </button>
         <div className="flex flex-wrap gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-text-main rounded-lg text-sm font-medium hover:bg-gray-50">
+          <button 
+            onClick={() => setShowInvoice(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-text-main rounded-lg text-sm font-medium hover:bg-gray-50"
+          >
             <FileText className="w-4 h-4" /> View Invoice
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-bold hover:bg-brand-primary/90 shadow-sm">
+          <button 
+            onClick={() => setShowInvoice(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-bold hover:bg-brand-primary/90 shadow-sm"
+          >
             <Download className="w-4 h-4" /> Download Receipt
           </button>
         </div>
@@ -91,7 +99,7 @@ export default function PaymentDetails() {
           <div className="md:col-span-2 mt-4">
             <h3 className="font-bold text-text-main text-sm uppercase tracking-wider border-b border-gray-100 pb-2 mb-6">Transaction Meta</h3>
             
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-6">
               <div>
                 <p className="text-xs text-text-muted font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5"/> Date</p>
                 <p className="text-sm font-medium text-text-main">{txnData.date}</p>
@@ -103,6 +111,10 @@ export default function PaymentDetails() {
               <div>
                 <p className="text-xs text-text-muted font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5"><Hash className="w-3.5 h-3.5"/> Invoice No.</p>
                 <p className="text-sm font-medium text-text-main font-mono">{txnData.invoice}</p>
+              </div>
+              <div>
+                <p className="text-xs text-text-muted font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5"><Hash className="w-3.5 h-3.5"/> Receipt ID</p>
+                <p className="text-sm font-medium text-text-main font-mono">{txnData.id}</p>
               </div>
               <div>
                 <p className="text-xs text-text-muted font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5"><ArrowRightLeft className="w-3.5 h-3.5"/> Currency</p>
@@ -120,6 +132,21 @@ export default function PaymentDetails() {
            </button>
         </div>
       </div>
+
+      <InvoiceModal 
+        isOpen={showInvoice} 
+        onClose={() => setShowInvoice(false)}
+        invoiceData={{
+          invoiceId: txnData.invoice,
+          receiptId: txnData.id,
+          date: txnData.date,
+          studentName: txnData.student,
+          studentEmail: txnData.email,
+          courseName: txnData.course,
+          amount: txnData.amount,
+          amountWords: 'Four Hundred Ninety Nine Only'
+        }}
+      />
     </div>
   );
 }

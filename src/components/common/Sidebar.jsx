@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import designed_by_logo from '../../assets/designed_by_logo.png';
 
 const menuItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -94,6 +95,11 @@ export default function Sidebar({ isOpen }) {
           <LogOut className="w-5 h-5 text-text-muted group-hover:text-status-error" />
           Logout
         </button>
+        
+        <div className="mt-6 flex justify-center items-center text-[10px] text-text-muted gap-2">
+          <span>Designed by</span>
+          <img src={designed_by_logo} alt="Designer Logo" className="h-6 w-auto object-contain bg-white px-2 py-0.5 rounded opacity-90 hover:opacity-100 transition-opacity" />
+        </div>
       </div>
     </aside>
   );

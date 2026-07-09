@@ -277,7 +277,7 @@ export default function UploadRecording() {
                 <label className="block text-sm font-medium text-text-main mb-2">Access Control</label>
                 <select {...register("access")} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20">
                   <option value="course">Course Students Only</option>
-                  <option value="premium">Premium Students Only</option>
+                  <option value="">Students Only</option>
                   <option value="public">Public</option>
                 </select>
               </div>

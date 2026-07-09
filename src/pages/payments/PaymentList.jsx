@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import axiosInstance from '../../services/axiosInstance';
 import Badge from '../../components/common/Badge';
+import InvoiceModal from '../../components/common/InvoiceModal';
 
 // ─── Date helpers ────────────────────────────────────────────────────────────
 const startOfDay  = (d) => { const r = new Date(d); r.setHours(0,0,0,0); return r; };
@@ -27,8 +28,12 @@ export default function PaymentList() {
   const [period, setPeriod]       = useState('all');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo,   setCustomTo]   = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('All');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showFilters, setShowFilters]   = useState(false);
+  const [showInvoice, setShowInvoice]   = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   useEffect(() => { fetchPayments(); }, []);
 
@@ -173,12 +178,17 @@ export default function PaymentList() {
   };
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
-  const handleDownloadReceipt = async (paymentId) => {
+  const handleDownloadReceipt = async (payment) => {
     try {
+      const paymentId = payment._id || payment;
       const res = await axiosInstance.get(`/payment/${paymentId}/receipt`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([res.data]));
+      
+      const courseTitle = payment.course?.title ? payment.course.title.replace(/[^a-zA-Z0-9]/g, '_') : 'Course';
+      const invoiceNumber = `INV-${paymentId.slice(-6).toUpperCase()}`;
+      
       const a   = document.createElement('a');
-      a.href = url; a.setAttribute('download', `Receipt_${paymentId}.pdf`);
+      a.href = url; a.setAttribute('download', `${courseTitle}_${invoiceNumber}.pdf`);
       document.body.appendChild(a); a.click(); a.remove();
     } catch { alert('Failed to download receipt'); }
   };
@@ -191,10 +201,17 @@ export default function PaymentList() {
   };
 
   const handleViewSampleReceipt = async () => {
-    try {
-      const res = await axiosInstance.get('/payment/sample-receipt', { responseType: 'blob' });
-      window.open(window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' })), '_blank');
-    } catch { alert('Failed to view sample receipt'); }
+    setSelectedInvoice({
+      invoiceId: 'INV-004821',
+      receiptId: 'pay_MIaXYz123',
+      date: new Date().toLocaleDateString(),
+      studentName: 'Alice Johnson',
+      studentEmail: 'alice.johnson@example.com',
+      courseName: 'Radiology Comprehensive Module',
+      amount: '₹449.00',
+      amountWords: 'Four Hundred Forty Nine Only'
+    });
+    setShowInvoice(true);
   };
 
   const getStatusVariant = (s) => ({ Success: 'success', Pending: 'warning', Failed: 'danger' }[s] || 'default');
@@ -379,7 +396,7 @@ export default function PaymentList() {
                   <td className="p-4 align-top text-right">
                     {payment.status === 'Success' && (
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleDownloadReceipt(payment._id)}
+                        <button onClick={() => handleDownloadReceipt(payment)}
                           className="p-2 text-brand-primary bg-brand-primary/10 rounded-lg hover:bg-brand-primary hover:text-white transition-colors" title="Download Receipt">
                           <Download className="w-4 h-4" />
                         </button>
@@ -415,6 +432,21 @@ export default function PaymentList() {
           </div>
         )}
       </div>
+
+      <InvoiceModal 
+        isOpen={showInvoice} 
+        onClose={() => setShowInvoice(false)}
+        invoiceData={selectedInvoice || {
+          invoiceId: 'INV-000000',
+          receiptId: 'pay_0000000',
+          date: new Date().toLocaleDateString(),
+          studentName: 'Student Name',
+          studentEmail: 'email@example.com',
+          courseName: 'Course Name',
+          amount: '₹0.00',
+          amountWords: 'Zero Only'
+        }}
+      />
     </div>
   );
 }
