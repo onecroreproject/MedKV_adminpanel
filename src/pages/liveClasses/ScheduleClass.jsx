@@ -345,7 +345,7 @@ export default function ScheduleClass() {
                 <label className="block text-sm font-medium text-text-main mb-1.5">Meeting Provider *</label>
                 <select {...register("meetingProvider")} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20">
                   <option value="zoom">Zoom Meeting (Default)</option>
-                  {/* WebRTC option hidden as per requirements */}
+                  <option value="webrtc">Built-in Classroom (WebRTC)</option>
                 </select>
               </div>
               
