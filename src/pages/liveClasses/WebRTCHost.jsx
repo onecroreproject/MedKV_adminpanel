@@ -68,6 +68,9 @@ export default function WebRTCHost() {
   const location = useLocation();
 
   const user = location.state?.user || JSON.parse(localStorage.getItem('adminUser')) || JSON.parse(localStorage.getItem('facultyUser')) || { name: 'Admin Host', role: 'admin' };
+  const liveClassInfo = location.state?.liveClass;
+  const courseName = liveClassInfo?.title || liveClassInfo?.courseName || liveClassInfo?.course?.title || 'LiveClass';
+  
   const isTeacher = true; 
 
   const [hasJoined, setHasJoined] = useState(false);
@@ -204,15 +207,16 @@ export default function WebRTCHost() {
       token={token}
       serverUrl={import.meta.env.VITE_LIVEKIT_URL}
       connect={true}
+      options={{ adaptiveStream: true, dynacast: true }}
       className="flex flex-col h-screen bg-slate-900 text-white relative"
     >
-      <ActiveHostClassroom user={user} roomId={roomId} isTeacher={isTeacher} />
+      <ActiveHostClassroom user={user} roomId={roomId} isTeacher={isTeacher} courseName={courseName} />
       <RoomAudioRenderer />
     </LiveKitRoom>
   );
 }
 
-function ActiveHostClassroom({ user, roomId, isTeacher }) {
+function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const navigate = useNavigate();
   
   const { localParticipant } = useLocalParticipant();
@@ -313,6 +317,17 @@ function ActiveHostClassroom({ user, roomId, isTeacher }) {
   const toggleRecording = async () => {
     if (!isRecording) {
       try {
+        // Check local storage space before starting
+        if (navigator.storage && navigator.storage.estimate) {
+          const estimate = await navigator.storage.estimate();
+          const availableMB = (estimate.quota - estimate.usage) / (1024 * 1024);
+          
+          if (availableMB < 1024) { // Less than 1 GB
+            const proceed = window.confirm(`WARNING: Your browser indicates you have low storage space (${Math.round(availableMB)} MB available). Long recordings might fail to save. Do you still want to proceed?`);
+            if (!proceed) return;
+          }
+        }
+
         const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         recordedChunks.current = [];
         mediaRecorderRef.current = new MediaRecorder(screenStream, { mimeType: 'video/webm' });
@@ -326,7 +341,12 @@ function ActiveHostClassroom({ user, roomId, isTeacher }) {
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `LiveClass_Recording_${roomId}_${new Date().toISOString()}.webm`;
+          
+          // Format filename: CourseName_Recording-1.webm
+          const safeCourseName = courseName.replace(/[^a-zA-Z0-9]/g, '_');
+          const timestamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+          a.download = `${safeCourseName}_Recording_${timestamp}.webm`;
+          
           a.click();
           window.URL.revokeObjectURL(url);
           screenStream.getTracks().forEach(t => t.stop());
@@ -347,6 +367,26 @@ function ActiveHostClassroom({ user, roomId, isTeacher }) {
     webrtcService.endClass();
     window.close();
     setTimeout(() => navigate(-1), 300);
+  };
+
+  const handleForceMute = async (identity) => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/mute-participant`, { roomId, identity }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+    } catch (err) {
+      console.error("Failed to mute participant", err);
+    }
+  };
+
+  const handleKickParticipant = async (identity) => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/kick-participant`, { roomId, identity }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+    } catch (err) {
+      console.error("Failed to kick participant", err);
+    }
   };
 
   const sendChat = (e) => {
@@ -552,11 +592,11 @@ function ActiveHostClassroom({ user, roomId, isTeacher }) {
                           {!p.isMicrophoneEnabled ? (
                             <span className="p-1.5 text-red-400" title="Muted"><MicOff size={14} /></span>
                           ) : (
-                            <button onClick={() => {}} className="p-1.5 bg-slate-600 hover:bg-red-500 rounded text-slate-300 transition" title="Force Mute">
+                            <button onClick={() => handleForceMute(p.identity)} className="p-1.5 bg-slate-600 hover:bg-red-500 rounded text-slate-300 transition" title="Force Mute">
                               <MicOff size={14} />
                             </button>
                           )}
-                          <button onClick={() => {}} className="p-1.5 bg-slate-600 hover:bg-red-500 rounded text-slate-300 transition" title="Remove Participant">
+                          <button onClick={() => handleKickParticipant(p.identity)} className="p-1.5 bg-slate-600 hover:bg-red-500 rounded text-slate-300 transition" title="Remove Participant">
                             <PhoneOff size={14} />
                           </button>
                         </div>
