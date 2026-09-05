@@ -79,6 +79,19 @@ export default function WebRTCHost() {
   
   const mainVideoWrapperRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  
+  const activeTabRef = useRef(activeTab);
+  const chatOpenRef = useRef(chatOpen);
+  
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+  useEffect(() => { chatOpenRef.current = chatOpen; }, [chatOpen]);
+  
+  useEffect(() => {
+    if (chatOpen && activeTab === 'chat') {
+      setUnreadChatCount(0);
+    }
+  }, [chatOpen, activeTab]);
   
   const [participants, setParticipants] = useState([
     { id: user._id || 'local', name: user.name + (isTeacher ? ' (Teacher)' : ' (You)'), role: user.role }
@@ -169,6 +182,9 @@ export default function WebRTCHost() {
       setMessages(prev => [...prev, data]);
       if (data.senderId !== user._id) {
         playSound('message');
+        if (activeTabRef.current !== 'chat' || !chatOpenRef.current) {
+          setUnreadChatCount(prev => prev + 1);
+        }
       }
     };
 
@@ -479,9 +495,14 @@ export default function WebRTCHost() {
             <div className="flex border-b border-slate-700">
               <button 
                 onClick={() => setActiveTab('chat')} 
-                className={`flex-1 p-3 font-bold text-center transition text-sm ${activeTab === 'chat' ? 'bg-slate-700 border-b-2 border-primary text-white' : 'text-slate-400 hover:bg-slate-750'}`}
+                className={`flex-1 p-3 font-bold text-center transition-all duration-300 text-sm flex items-center justify-center gap-2 ${activeTab === 'chat' ? 'bg-slate-700 border-b-2 border-primary text-white' : 'text-slate-400 hover:bg-slate-750'}`}
               >
                 Chat
+                {unreadChatCount > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-bounce shadow-[0_0_8px_rgba(239,68,68,0.8)]">
+                    {unreadChatCount}
+                  </span>
+                )}
               </button>
               <button 
                 onClick={() => setActiveTab('participants')} 
@@ -640,6 +661,11 @@ export default function WebRTCHost() {
         <div className="flex gap-2">
           <button onClick={() => setChatOpen(!chatOpen)} className={`p-3 rounded-full ${chatOpen ? 'bg-primary text-white' : 'bg-slate-600 hover:bg-slate-500'} transition relative`} title="Chat">
             <MessageSquare size={20} />
+            {unreadChatCount > 0 && !chatOpen && (
+               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-bounce">
+                  {unreadChatCount}
+               </span>
+            )}
           </button>
         </div>
       </footer>
