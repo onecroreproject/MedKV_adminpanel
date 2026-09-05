@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, UserCheck, BookOpen, Video, 
   Film, Activity, Stethoscope, FolderOpen, HelpCircle, 
   FileText, CalendarDays, FileCode, CheckSquare, Bell, 
-  Award, CreditCard, Repeat, ShieldCheck, User, LogOut, Layout, Settings, Search 
+  Award, CreditCard, Repeat, ShieldCheck, User, LogOut, Layout, Settings, Search, Terminal
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -36,6 +36,7 @@ const menuItems = [
   // { name: 'Admins & Roles', path: '/admins', icon: ShieldCheck },
   { name: 'Settings', path: '/settings', icon: Settings },
   { name: 'Profile', path: '/profile', icon: User },
+  { name: 'Developer', path: '/developer', icon: Terminal },
 ];
 
 export default function Sidebar({ isOpen }) {

@@ -89,6 +89,7 @@ import ProfileSettings from './pages/profile/ProfileSettings';
 import SettingsDashboard from './pages/settings/SettingsDashboard';
 import SEODashboard from './pages/seo/SEODashboard';
 import SEOEditor from './pages/seo/SEOEditor';
+import DeveloperConsole from './pages/developer/DeveloperConsole';
 
 import ProtectedRoute from './components/common/ProtectedRoute';
 import WebRTCHost from './pages/liveClasses/WebRTCHost';
@@ -221,6 +222,9 @@ function App() {
           {/* SEO Route */}
           <Route path="seo" element={<SEODashboard />} />
           <Route path="seo/edit/:id" element={<SEOEditor />} />
+
+          {/* Developer Console */}
+          <Route path="developer" element={<DeveloperConsole />} />
         </Route>
 
         {/* Protected Faculty Dashboard Routes */}
