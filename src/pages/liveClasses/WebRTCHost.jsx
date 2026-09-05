@@ -324,7 +324,7 @@ export default function WebRTCHost() {
               <video 
                 ref={el => {
                   myVideoRef.current = el;
-                  if (el && stream) el.srcObject = stream;
+                  if (el && stream && el.srcObject !== stream) el.srcObject = stream;
                 }} 
                 autoPlay playsInline muted className="w-full h-full object-cover -scale-x-100" 
               />
@@ -419,7 +419,7 @@ export default function WebRTCHost() {
                 <video 
                   ref={el => {
                     myVideoRef.current = el;
-                    if (el && stream) el.srcObject = stream;
+                    if (el && stream && el.srcObject !== stream) el.srcObject = stream;
                   }} 
                   autoPlay playsInline muted className={`w-full h-full object-contain -scale-x-100 ${isScreenSharing ? 'opacity-0' : 'opacity-100'}`} 
                 />
@@ -461,7 +461,7 @@ export default function WebRTCHost() {
                         autoPlay 
                         playsInline 
                         className="w-full h-full absolute inset-0 object-cover" 
-                        ref={el => { if (el) el.srcObject = remoteStreams[socketId] }} 
+                        ref={el => { if (el && remoteStreams[socketId] && el.srcObject !== remoteStreams[socketId]) el.srcObject = remoteStreams[socketId] }} 
                       />
                     </div>
                     <div className="px-2 py-1.5 text-center text-xs text-slate-300 font-medium truncate bg-slate-800 border-t border-slate-700">
