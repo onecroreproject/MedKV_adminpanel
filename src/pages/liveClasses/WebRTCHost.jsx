@@ -376,7 +376,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher }) {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
              <img src={darkLogo} alt="Logo" className="h-8 object-contain" />
-             <h1 className="font-bold text-lg">Classroom {isRecording && <span className="text-red-500 ml-2 animate-pulse">● Recording</span>}</h1>
+             <h1 className="font-bold text-lg">Live Classroom {isRecording && <span className="text-red-500 ml-2 animate-pulse">● Recording</span>}</h1>
           </div>
           <div className="h-6 w-px bg-slate-600 mx-2"></div>
           <div className="flex items-center gap-3">
