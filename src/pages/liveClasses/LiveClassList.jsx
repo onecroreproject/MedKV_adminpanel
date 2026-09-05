@@ -32,7 +32,7 @@ export default function LiveClassList() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [facultyFilter, setFacultyFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('active'); // Default to active (Live & Scheduled)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const getFullVideoUrl = (url) => {
@@ -142,9 +142,23 @@ export default function LiveClassList() {
 
   const filteredSessions = sessions.filter(session => {
     const matchesSearch = session.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter ? session.status.toLowerCase() === statusFilter.toLowerCase() : true;
+    
+    let matchesStatus = true;
+    if (statusFilter === 'active') {
+       matchesStatus = ['live now', 'scheduled'].includes(session.status?.toLowerCase());
+    } else if (statusFilter && statusFilter !== 'all') {
+       matchesStatus = session.status?.toLowerCase() === statusFilter.toLowerCase();
+    }
+
     const matchesFaculty = facultyFilter ? session.faculty?._id === facultyFilter : true;
     return matchesSearch && matchesStatus && matchesFaculty;
+  }).sort((a, b) => {
+    // Keep 'Live Now' at the very top
+    if (a.status?.toLowerCase() === 'live now' && b.status?.toLowerCase() !== 'live now') return -1;
+    if (a.status?.toLowerCase() !== 'live now' && b.status?.toLowerCase() === 'live now') return 1;
+    
+    // Sort the rest by date descending
+    return new Date(b.date) - new Date(a.date);
   });
 
   const handleExport = () => {
@@ -265,7 +279,8 @@ export default function LiveClassList() {
                 })}
               </select>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary min-w-[150px]">
-                <option value="">Status</option>
+                <option value="all">All Statuses</option>
+                <option value="active">Active (Live & Scheduled)</option>
                 <option value="scheduled">Scheduled</option>
                 <option value="live now">Live Now</option>
                 <option value="completed">Completed</option>

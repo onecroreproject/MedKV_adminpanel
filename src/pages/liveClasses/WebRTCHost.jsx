@@ -326,7 +326,7 @@ export default function WebRTCHost() {
                   myVideoRef.current = el;
                   if (el && stream) el.srcObject = stream;
                 }} 
-                autoPlay playsInline muted className="w-full h-full object-cover" 
+                autoPlay playsInline muted className="w-full h-full object-cover -scale-x-100" 
               />
             ) : mediaError ? (
               <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center text-red-400 bg-red-950/30">
@@ -421,7 +421,7 @@ export default function WebRTCHost() {
                     myVideoRef.current = el;
                     if (el && stream) el.srcObject = stream;
                   }} 
-                  autoPlay playsInline muted className={`w-full h-full object-contain ${isScreenSharing ? 'opacity-0' : 'opacity-100'}`} 
+                  autoPlay playsInline muted className={`w-full h-full object-contain -scale-x-100 ${isScreenSharing ? 'opacity-0' : 'opacity-100'}`} 
                 />
              ) : (
                 // Student sees the teacher's video
@@ -444,7 +444,7 @@ export default function WebRTCHost() {
              {!isTeacher && (
                 <div className="w-48 flex flex-col bg-slate-800 rounded-lg overflow-hidden border border-slate-600 shadow-lg">
                   <div className="flex-1 bg-black relative">
-                    <video ref={myVideoRef} autoPlay playsInline muted className="w-full h-full absolute inset-0 object-cover" />
+                    <video ref={myVideoRef} autoPlay playsInline muted className="w-full h-full absolute inset-0 object-cover -scale-x-100" />
                   </div>
                   <div className="px-2 py-1.5 text-center text-xs text-slate-300 font-medium truncate bg-slate-800 border-t border-slate-700">
                     You
