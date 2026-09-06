@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Download, MoreVertical, Search, Filter, Mail, Phone, Calendar, Edit, Trash2, Ban, Eye } from 'lucide-react';
 import Badge from '../../components/common/Badge';
 import { getStudents } from '../../services/studentService';
+import { getCourses } from '../../services/courseService';
 import { exportToCSV } from '../../utils/exportUtils';
+import { createPortal } from 'react-dom';
 
 export default function StudentList() {
   const navigate = useNavigate();
@@ -13,21 +15,34 @@ export default function StudentList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [courses, setCourses] = useState([]);
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [portalsReady, setPortalsReady] = useState(false);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
-    const fetchStudents = async () => {
+    const fetchData = async () => {
       try {
-        const response = await getStudents();
-        setStudents(response.data || []);
+        const [studentsRes, coursesRes] = await Promise.all([
+          getStudents(),
+          getCourses()
+        ]);
+        setStudents(studentsRes.data || []);
+        setCourses(coursesRes.data || []);
       } catch (err) {
-        setError('Failed to fetch students.');
+        setError('Failed to fetch data.');
       } finally {
         setIsLoading(false);
       }
     };
-    fetchStudents();
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    setPortalsReady(true);
+    return () => setPortalsReady(false);
   }, []);
 
   useEffect(() => {
@@ -57,9 +72,25 @@ export default function StudentList() {
       student.phoneNumber?.includes(searchQuery);
     
     const studentStatus = student.isActive !== false ? 'active' : 'inactive';
-    const matchesStatus = !statusFilter || studentStatus === statusFilter;
+    const matchesStatus = 
+      !statusFilter ? true
+      : statusFilter === 'not-enrolled' ? (!student.enrolledCourses || student.enrolledCourses.length === 0)
+      : studentStatus === statusFilter;
     
-    return matchesSearch && matchesStatus;
+    const matchesCourse = 
+      !courseFilter ? true 
+      : student.enrolledCourses?.some(c => c.course && c.course._id === courseFilter);
+
+    const studentDate = new Date(student.createdAt);
+    const start = startDate ? new Date(startDate) : null;
+    if (start) start.setHours(0, 0, 0, 0);
+    const end = endDate ? new Date(endDate) : null;
+    if (end) end.setHours(23, 59, 59, 999);
+    
+    const matchesStartDate = !start || studentDate >= start;
+    const matchesEndDate = !end || studentDate <= end;
+    
+    return matchesSearch && matchesStatus && matchesCourse && matchesStartDate && matchesEndDate;
   });
 
   const toggleDropdown = (id, e) => {
@@ -68,50 +99,72 @@ export default function StudentList() {
   };
 
   const handleExport = () => {
+    const exportData = filteredStudents.map(student => ({
+      name: student.name || '',
+      email: student.email || '',
+      phoneNumber: student.phoneNumber || '',
+      isActive: student.isActive !== false ? 'Active' : 'Inactive',
+      createdAt: new Date(student.createdAt).toLocaleDateString(),
+      enrolledCoursesCount: student.enrolledCourses?.length || 0,
+      enrolledCoursesNames: student.enrolledCourses?.map(c => c.course?.title).filter(Boolean).join(', ') || '',
+      averageProgress: student.enrolledCourses?.length ? 
+        Math.round(student.enrolledCourses.reduce((sum, c) => sum + (c.progress || 0), 0) / student.enrolledCourses.length) + '%' : '0%'
+    }));
+
     const headers = [
       { label: 'Name', key: 'name' },
       { label: 'Email', key: 'email' },
       { label: 'Phone Number', key: 'phoneNumber' },
-      { label: 'Active', key: 'isActive' },
-      { label: 'Registered Date', key: 'createdAt' }
+      { label: 'Active Status', key: 'isActive' },
+      { label: 'Registered Date', key: 'createdAt' },
+      { label: 'Enrolled Courses Count', key: 'enrolledCoursesCount' },
+      { label: 'Enrolled Courses Names', key: 'enrolledCoursesNames' },
+      { label: 'Average Progress', key: 'averageProgress' }
     ];
-    exportToCSV(filteredStudents, headers, 'students_export.csv');
+    exportToCSV(exportData, headers, 'students_export.csv');
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-main">Student Management</h1>
-          <p className="text-sm text-text-muted mt-1">Manage all registered students, subscriptions, and activities.</p>
-        </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+      {portalsReady && document.getElementById('topbar-title-portal') && createPortal(
+        <span>Student Management</span>,
+        document.getElementById('topbar-title-portal')
+      )}
+
+      {portalsReady && document.getElementById('topbar-search-portal') && createPortal(
+        <div className="flex-1 min-w-[250px] w-full">
+          <div className="relative">
+            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Search by Name, Email, or Mobile..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary bg-gray-50"
+            />
+          </div>
+        </div>,
+        document.getElementById('topbar-search-portal')
+      )}
+
+      {portalsReady && document.getElementById('topbar-actions-portal') && createPortal(
+        <>
           <button 
             onClick={handleExport}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 bg-white text-text-main rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 bg-white text-text-main rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
           >
             <Download className="w-4 h-4" /> Export
           </button>
-          <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium hover:bg-brand-primary/90 transition-colors">
+          <button className="flex items-center justify-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium hover:bg-brand-primary/90 transition-colors">
             <Plus className="w-4 h-4 text-brand-accent" /> Add Student
           </button>
-        </div>
-      </div>
+        </>,
+        document.getElementById('topbar-actions-portal')
+      )}
 
       {/* Filters Area */}
-      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col lg:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input 
-            type="text" 
-            placeholder="Search by Name, Email, or Mobile..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-          />
-        </div>
-        <div className="flex flex-wrap lg:flex-nowrap gap-3">
+      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col xl:flex-row gap-4">
+        <div className="flex flex-wrap gap-3">
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -119,18 +172,34 @@ export default function StudentList() {
             <option value="">All Statuses</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
+            <option value="not-enrolled">Not Enrolled</option>
           </select>
           <select 
             value={courseFilter}
             onChange={(e) => setCourseFilter(e.target.value)}
             className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary min-w-[150px]">
             <option value="">All Courses</option>
-            <option value="frcr">FRCR Part 1</option>
-            <option value="anatomy">Anatomy</option>
+            {courses.map(course => (
+              <option key={course._id} value={course._id}>{course.title}</option>
+            ))}
           </select>
-          <button className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 bg-gray-50 text-text-main rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors">
-            <Filter className="w-4 h-4" /> More Filters
-          </button>
+          <div className="flex items-center gap-2">
+            <input 
+              type="date" 
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary"
+              title="Start Date"
+            />
+            <span className="text-text-muted text-sm">to</span>
+            <input 
+              type="date" 
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary"
+              title="End Date"
+            />
+          </div>
         </div>
       </div>
 
@@ -202,7 +271,16 @@ export default function StudentList() {
                         <span className="text-xs font-medium">
                           {student.enrolledCourses?.length || 0} Enrolled
                         </span>
-                        <div className="flex items-center gap-2">
+                        {student.enrolledCourses?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1 max-w-[200px]">
+                            {student.enrolledCourses.map((c, i) => c.course && (
+                              <span key={i} className="text-[10px] bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded-full truncate max-w-[180px]">
+                                {c.course.title}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 mt-1">
                           <div className="w-24 bg-gray-100 rounded-full h-1.5">
                             <div 
                               className="bg-brand-primary h-1.5 rounded-full" 

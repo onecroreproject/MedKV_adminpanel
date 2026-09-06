@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Mail, Search, CheckCircle, Clock, Send, X, MoreVertical, Check, MessageSquare } from 'lucide-react';
 import axiosInstance from '../../services/axiosInstance';
 import Badge from '../../components/common/Badge';
 
 export default function EnquiryList() {
   const [enquiries, setEnquiries] = useState([]);
+  const [portalsReady, setPortalsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('All');
   
@@ -12,6 +14,12 @@ export default function EnquiryList() {
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
+
+  
+  useEffect(() => {
+    setPortalsReady(true);
+    return () => setPortalsReady(false);
+  }, []);
 
   useEffect(() => {
     fetchEnquiries();
@@ -71,13 +79,15 @@ export default function EnquiryList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-main">Student Enquiries</h1>
-          <p className="text-sm text-text-muted mt-1">Manage and respond to admissions requests from the website.</p>
-        </div>
-        
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+
+      {portalsReady && document.getElementById('topbar-title-portal') && createPortal(
+        <span>Student Enquiries</span>,
+        document.getElementById('topbar-title-portal')
+      )}
+
+
+      {portalsReady && document.getElementById('topbar-actions-portal') && createPortal(
+        <>
           <div className="relative flex-1 sm:w-64">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input 
@@ -96,8 +106,11 @@ export default function EnquiryList() {
             <option value="Read">Read</option>
             <option value="Resolved">Resolved</option>
           </select>
-        </div>
-      </div>
+        </>,
+        document.getElementById('topbar-actions-portal')
+      )}
+
+      
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

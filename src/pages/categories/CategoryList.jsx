@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
 import { getCategories, createCategory, deleteCategory } from '../../services/categoryService';
 
 export default function CategoryList() {
   const [categories, setCategories] = useState([]);
+  const [portalsReady, setPortalsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
   const [searchQuery, setSearchQuery] = useState('');
+
+  
+  useEffect(() => {
+    setPortalsReady(true);
+    return () => setPortalsReady(false);
+  }, []);
 
   useEffect(() => {
     fetchCategories();
@@ -49,12 +57,15 @@ export default function CategoryList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-black mb-1">Categories</h1>
-          <p className="text-text-muted">Manage course categories for the platform</p>
-        </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+
+      {portalsReady && document.getElementById('topbar-title-portal') && createPortal(
+        <span>Categories</span>,
+        document.getElementById('topbar-title-portal')
+      )}
+
+
+      {portalsReady && document.getElementById('topbar-actions-portal') && createPortal(
+        <>
           <div className="relative flex-1 sm:w-64">
             <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input 
@@ -69,8 +80,11 @@ export default function CategoryList() {
             <Plus className="w-4 h-4" />
             Add Category
           </button>
-        </div>
-      </div>
+        </>,
+        document.getElementById('topbar-actions-portal')
+      )}
+
+      
 
       <div className="bg-bg-sidebar rounded-xl border border-gray-800 overflow-hidden">
         <div className="overflow-x-auto">

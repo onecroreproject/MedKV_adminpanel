@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Download, Search, Filter, MoreVertical, LayoutGrid, List as ListIcon, PlayCircle, Clock, RefreshCw, X, Video, Eye, Trash2, Upload } from 'lucide-react';
 import Badge from '../../components/common/Badge';
@@ -8,7 +9,8 @@ import { exportToCSV } from '../../utils/exportUtils';
 
 export default function RecordingList() {
   const navigate = useNavigate();
-  const [view, setView] = useState('list'); // 'list' or 'grid'
+  const [view, setView] = useState('list');
+  const [portalsReady, setPortalsReady] = useState(false); // 'list' or 'grid'
   const [recordings, setRecordings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,6 +20,12 @@ export default function RecordingList() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api/v1', '') : 'http://localhost:5000';
+
+  
+  useEffect(() => {
+    setPortalsReady(true);
+    return () => setPortalsReady(false);
+  }, []);
 
   useEffect(() => {
     fetchRecordings();
@@ -90,13 +98,31 @@ export default function RecordingList() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-main">Recorded Sessions</h1>
-          <p className="text-sm text-text-muted mt-1">Manage video content, zoom recordings, and lectures.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+      {portalsReady && document.getElementById('topbar-title-portal') && createPortal(
+        <span>Recorded Sessions</span>,
+        document.getElementById('topbar-title-portal')
+      )}
+
+
+      {portalsReady && document.getElementById('topbar-search-portal') && createPortal(
+        <div className="flex-1 min-w-[250px] w-full">
+          <div className="relative">
+          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input 
+            type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search Recordings by Title..." 
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary bg-gray-50"
+          />
+          </div>
+        </div>,
+        document.getElementById('topbar-search-portal')
+      )}
+
+
+      {portalsReady && document.getElementById('topbar-actions-portal') && createPortal(
+        <>
           <div className="flex p-1 bg-gray-100 rounded-lg">
             <button 
               onClick={() => setView('list')}
@@ -131,21 +157,15 @@ export default function RecordingList() {
           >
             <Plus className="w-4 h-4 text-brand-accent" /> Upload Recording
           </button>
-        </div>
-      </div>
+        </>,
+        document.getElementById('topbar-actions-portal')
+      )}
+
+      
 
       {/* Filters Area */}
       <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col lg:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input 
-            type="text" 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Recordings by Title..." 
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-          />
-        </div>
+        
         <div className="flex flex-wrap lg:flex-nowrap gap-3">
           <select value={courseFilter} onChange={(e) => setCourseFilter(e.target.value)} className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary min-w-[150px]">
             <option value="">All Courses</option>

@@ -5,12 +5,19 @@ import { getSettings, updateSettings } from '../../services/settingsService';
 import { uploadFile } from '../../services/uploadService';
 import default_icon_logo from '../../assets/logos/dark_logo_transparent.png';
 import default_name_logo from '../../assets/logos/company_name_transparent.png';
+import { createPortal } from 'react-dom';
 
 export default function SettingsDashboard() {
   const [activeTab, setActiveTab] = useState('general');
   const [settings, setSettings] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [portalsReady, setPortalsReady] = useState(false);
+
+  useEffect(() => {
+    setPortalsReady(true);
+    return () => setPortalsReady(false);
+  }, []);
 
   useEffect(() => {
     fetchSettings();
@@ -92,12 +99,10 @@ export default function SettingsDashboard() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-main">Platform Settings</h1>
-          <p className="text-sm text-text-muted mt-1">Manage academy branding, contact details, and security policies.</p>
-        </div>
-      </div>
+      {portalsReady && document.getElementById('topbar-title-portal') && createPortal(
+        <span>Platform Settings</span>,
+        document.getElementById('topbar-title-portal')
+      )}
 
       {/* KPI Header */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

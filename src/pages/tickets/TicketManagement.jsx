@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, Filter, MessageSquare, Clock, CheckCircle, XCircle } from 'lucide-react';
 import axiosInstance from '../../services/axiosInstance';
 import Badge from '../../components/common/Badge';
 
 export default function TicketManagement() {
   const [tickets, setTickets] = useState([]);
+  const [portalsReady, setPortalsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
   // Filters
@@ -15,6 +17,12 @@ export default function TicketManagement() {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [statusUpdate, setStatusUpdate] = useState('');
+
+  
+  useEffect(() => {
+    setPortalsReady(true);
+    return () => setPortalsReady(false);
+  }, []);
 
   useEffect(() => {
     fetchTickets();
@@ -85,46 +93,7 @@ export default function TicketManagement() {
 
   return (
     <div className="space-y-6 pb-12 relative h-full">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-text-main">Support Tickets</h1>
-          <p className="text-sm text-text-muted mt-1">Manage and respond to student inquiries.</p>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-4 flex flex-wrap gap-4">
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-400" />
-          <span className="text-sm font-medium text-gray-700">Status:</span>
-          <select 
-            value={statusFilter} 
-            onChange={e => setStatusFilter(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-brand-primary outline-none"
-          >
-            <option value="all">All Status</option>
-            <option value="Open">Open</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Resolved">Resolved</option>
-            <option value="Closed">Closed</option>
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Category:</span>
-          <select 
-            value={categoryFilter} 
-            onChange={e => setCategoryFilter(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-brand-primary outline-none"
-          >
-            <option value="all">All Categories</option>
-            <option value="Technical Issue">Technical Issue</option>
-            <option value="Billing & Payments">Billing & Payments</option>
-            <option value="Course Content">Course Content</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-      </div>
+      
 
       <div className="flex gap-6 h-[600px]">
         {/* Ticket List */}

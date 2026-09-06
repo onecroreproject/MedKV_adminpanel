@@ -1,18 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Download, MoreVertical, Search, Filter, BookOpen, Users, DollarSign, Edit, Trash2, Eye } from 'lucide-react';
 import Badge from '../../components/common/Badge';
 import { getCourses, deleteCourse } from '../../services/courseService';
 import { getCategories } from '../../services/categoryService';
+import { exportToCSV } from '../../utils/exportUtils';
 
 export default function CourseList() {
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
+  const [portalsReady, setPortalsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [categories, setCategories] = useState([]);
+
+  
+  useEffect(() => {
+    setPortalsReady(true);
+    return () => setPortalsReady(false);
+  }, []);
 
   useEffect(() => {
     fetchCourses();
@@ -72,15 +81,61 @@ export default function CourseList() {
     }
   };
 
+  const handleExport = () => {
+    const exportData = filteredCourses.map(course => ({
+      title: course.title,
+      category: course.category?.name || course.category,
+      instructor: course.instructor?.name || 'Unknown',
+      price: course.price,
+      students: course.studentCount || 0,
+      status: course.status,
+      createdAt: new Date(course.createdAt).toLocaleDateString()
+    }));
+
+    const headers = [
+      { label: 'Course Title', key: 'title' },
+      { label: 'Category', key: 'category' },
+      { label: 'Instructor', key: 'instructor' },
+      { label: 'Price', key: 'price' },
+      { label: 'Students Enrolled', key: 'students' },
+      { label: 'Status', key: 'status' },
+      { label: 'Created At', key: 'createdAt' }
+    ];
+    exportToCSV(exportData, headers, 'courses_export.csv');
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-main">Course Management</h1>
-          <p className="text-sm text-text-muted mt-1">Manage educational programs, modules, and publishing status.</p>
-        </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 bg-white text-text-main rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+
+      {portalsReady && document.getElementById('topbar-title-portal') && createPortal(
+        <span>Course Management</span>,
+        document.getElementById('topbar-title-portal')
+      )}
+
+
+      {portalsReady && document.getElementById('topbar-search-portal') && createPortal(
+        <div className="flex-1 min-w-[250px] w-full">
+          <div className="relative">
+          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input 
+            type="text" 
+            placeholder="Search Courses by Name..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary bg-gray-50"
+          />
+          </div>
+        </div>,
+        document.getElementById('topbar-search-portal')
+      )}
+
+
+      {portalsReady && document.getElementById('topbar-actions-portal') && createPortal(
+        <>
+          <button 
+            onClick={handleExport}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 bg-white text-text-main rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
             <Download className="w-4 h-4" /> Export
           </button>
           <button 
@@ -89,21 +144,15 @@ export default function CourseList() {
           >
             <Plus className="w-4 h-4 text-brand-accent" /> Create Course
           </button>
-        </div>
-      </div>
+        </>,
+        document.getElementById('topbar-actions-portal')
+      )}
+
+      
 
       {/* Filters Area */}
       <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col lg:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input 
-            type="text" 
-            placeholder="Search Courses by Name..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-          />
-        </div>
+        
         <div className="flex flex-wrap lg:flex-nowrap gap-3">
           <select 
             value={categoryFilter}
@@ -194,7 +243,7 @@ export default function CourseList() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1.5 text-text-muted">
                         <Users className="w-4 h-4" />
-                        {0}
+                        {course.studentCount || 0}
                       </div>
                     </td>
                     <td className="px-6 py-4">

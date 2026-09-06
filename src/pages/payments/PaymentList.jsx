@@ -6,6 +6,7 @@ import {
 import axiosInstance from '../../services/axiosInstance';
 import Badge from '../../components/common/Badge';
 import InvoiceModal from '../../components/common/InvoiceModal';
+import { createPortal } from 'react-dom';
 
 // ─── Date helpers ────────────────────────────────────────────────────────────
 const startOfDay  = (d) => { const r = new Date(d); r.setHours(0,0,0,0); return r; };
@@ -34,6 +35,12 @@ export default function PaymentList() {
   const [showFilters, setShowFilters]   = useState(false);
   const [showInvoice, setShowInvoice]   = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [portalsReady, setPortalsReady] = useState(false);
+
+  useEffect(() => {
+    setPortalsReady(true);
+    return () => setPortalsReady(false);
+  }, []);
 
   useEffect(() => { fetchPayments(); }, []);
 
@@ -220,14 +227,12 @@ export default function PaymentList() {
 
   return (
     <div className="space-y-6 pb-12">
-
-      {/* ── Header ── */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-text-main">Payment Management</h1>
-          <p className="text-sm text-text-muted mt-1">Monitor course purchases, billing & generate reports.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      {portalsReady && document.getElementById('topbar-title-portal') && createPortal(
+        <span>Payment Management</span>,
+        document.getElementById('topbar-title-portal')
+      )}
+      {portalsReady && document.getElementById('topbar-actions-portal') && createPortal(
+        <>
           <button onClick={handleViewSampleReceipt}
             className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">
             <Eye className="w-4 h-4" /> Sample Receipt
@@ -240,8 +245,9 @@ export default function PaymentList() {
             className="flex items-center gap-2 px-3 py-2 bg-brand-primary text-white rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
             <FileText className="w-4 h-4" /> Download Report
           </button>
-        </div>
-      </div>
+        </>,
+        document.getElementById('topbar-actions-portal')
+      )}
 
       {/* ── Stat Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

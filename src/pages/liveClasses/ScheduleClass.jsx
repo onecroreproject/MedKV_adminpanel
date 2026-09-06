@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { ArrowLeft, Save, X, Video, Calendar, Link as LinkIcon, Shield, Clock, BookOpen, Layers, CheckSquare } from 'lucide-react';
+import { ArrowLeft, Save, X, Video, Calendar, Link as LinkIcon, Shield, Clock, BookOpen, Layers, CheckSquare, CheckCircle } from 'lucide-react';
 import { getCourses, getCourseById } from '../../services/courseService';
 import { getFaculty } from '../../services/facultyService';
 import { createLiveClass, getLiveClass, updateLiveClass } from '../../services/liveClassService';
@@ -135,13 +135,20 @@ export default function ScheduleClass() {
       }
     }
 
+    const payload = { ...data };
+    ['course', 'courseModule', 'lesson', 'faculty'].forEach(field => {
+      if (payload[field] === '') {
+        payload[field] = null;
+      }
+    });
+
     try {
       if (isEditMode) {
-        await updateLiveClass(id, data);
+        await updateLiveClass(id, payload);
         alert('Session Updated Successfully!');
         navigate(`/live-classes/${id}`);
       } else {
-        await createLiveClass(data);
+        await createLiveClass(payload);
         alert('Session Scheduled Successfully!');
         navigate('/live-classes');
       }
