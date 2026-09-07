@@ -221,47 +221,57 @@ export default function LiveClassList() {
 
       {portalsReady && document.getElementById('topbar-actions-portal') && createPortal(
         <>
-          <div className="flex p-1 bg-gray-100 rounded-lg">
-            <button 
+          {/* List / Calendar Toggle */}
+          <div className="flex p-1 bg-gray-100 rounded-lg h-9 items-center">
+            <button
               onClick={() => setView('list')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${view === 'list' ? 'bg-white text-text-main shadow-sm' : 'text-gray-500 hover:text-text-main'}`}
+              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${view === 'list' ? 'bg-white text-text-main shadow-sm' : 'text-gray-500 hover:text-text-main'}`}
             >
               List
             </button>
-            <button 
+            <button
               onClick={() => setView('calendar')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${view === 'calendar' ? 'bg-white text-text-main shadow-sm' : 'text-gray-500 hover:text-text-main'}`}
+              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${view === 'calendar' ? 'bg-white text-text-main shadow-sm' : 'text-gray-500 hover:text-text-main'}`}
             >
               Calendar
             </button>
           </div>
-          <button 
+
+          {/* Import CSV */}
+          <button
             onClick={() => setIsImportModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2 border border-brand-primary/20 bg-brand-primary/5 text-brand-primary rounded-lg text-sm font-medium hover:bg-brand-primary/10 transition-colors"
+            className="h-9 flex items-center gap-1.5 px-3 border border-brand-primary/20 bg-brand-primary/5 text-brand-primary rounded-lg text-sm font-medium hover:bg-brand-primary/10 transition-colors whitespace-nowrap"
           >
-            <Upload className="w-4 h-4" /> Import CSV
+            <Upload className="w-4 h-4 shrink-0" /> Import CSV
           </button>
-          <button 
+
+          {/* Export */}
+          <button
             onClick={handleExport}
-            className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 bg-white text-text-main rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            className="h-9 flex items-center gap-1.5 px-3 border border-gray-200 bg-white text-text-main rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors whitespace-nowrap"
           >
-            <Download className="w-4 h-4" /> Export
+            <Download className="w-4 h-4 shrink-0" /> Export
           </button>
-          <button 
-            onClick={() => navigate('/live-classes/monitor')} 
-            className="flex items-center gap-2 px-4 py-2 border border-brand-primary text-brand-primary rounded-lg text-sm font-medium hover:bg-brand-primary/5 transition-colors"
+
+          {/* System Monitor */}
+          <button
+            onClick={() => navigate('/live-classes/monitor')}
+            className="h-9 flex items-center gap-1.5 px-3 border border-brand-primary text-brand-primary rounded-lg text-sm font-medium hover:bg-brand-primary/5 transition-colors whitespace-nowrap"
           >
-            <Activity className="w-4 h-4" /> System Monitor
+            <Activity className="w-4 h-4 shrink-0" /> System Monitor
           </button>
-          <button 
+
+          {/* Schedule Session */}
+          <button
             onClick={() => navigate('/live-classes/schedule')}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium hover:bg-brand-primary/90 transition-colors shadow-sm shadow-brand-primary/30"
+            className="h-9 flex items-center gap-1.5 px-3 bg-brand-primary text-white rounded-lg text-sm font-medium hover:bg-brand-primary/90 transition-colors shadow-sm shadow-brand-primary/30 whitespace-nowrap"
           >
-            <Plus className="w-4 h-4 text-brand-accent" /> Schedule Session
+            <Plus className="w-4 h-4 text-brand-accent shrink-0" /> Schedule Session
           </button>
         </>,
         document.getElementById('topbar-actions-portal')
       )}
+
 
       
 
