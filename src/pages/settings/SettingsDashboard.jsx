@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Globe, Phone, Share2, Shield, History, Upload, Save, CheckCircle, Activity, Users, AlertCircle, Clock, Lock, FileText } from 'lucide-react';
+import { Settings, Globe, Phone, Share2, Shield, History, Upload, Save, CheckCircle, Activity, Users, AlertCircle, Clock, Lock, FileText, Image, Trash2 } from 'lucide-react';
 import SecuritySettings from './SecuritySettings';
 import { getSettings, updateSettings } from '../../services/settingsService';
 import { uploadFile } from '../../services/uploadService';
@@ -30,6 +30,9 @@ export default function SettingsDashboard() {
         // Ensure policies exist if it's an old document
         if (!data.data.policies) {
           data.data.policies = { termsAndConditions: '', privacyPolicy: '', refundPolicy: '' };
+        }
+        if (!data.data.banners) {
+          data.data.banners = [];
         }
         setSettings(data.data);
       }
@@ -83,8 +86,45 @@ export default function SettingsDashboard() {
     }
   };
 
+  const handleBannerUpload = async (index, event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      setIsSaving(true);
+      const data = await uploadFile(file);
+      if (data.success && data.url) {
+        const newBanners = [...settings.banners];
+        newBanners[index] = { ...newBanners[index], imageUrl: data.url };
+        setSettings(prev => ({ ...prev, banners: newBanners }));
+      }
+    } catch (error) {
+      console.error(`Failed to upload banner:`, error);
+      alert(`Failed to upload banner image.`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleBannerChange = (index, field, value) => {
+    const newBanners = [...settings.banners];
+    newBanners[index] = { ...newBanners[index], [field]: value };
+    setSettings(prev => ({ ...prev, banners: newBanners }));
+  };
+
+  const handleAddBanner = () => {
+    if (settings.banners.length >= 3) return;
+    setSettings(prev => ({ ...prev, banners: [...prev.banners, { imageUrl: '', title: '', highlightText: '', description: '', buttonText: '', link: '', button2Text: '', button2Link: '', isActive: true }] }));
+  };
+
+  const handleRemoveBanner = (index) => {
+    const newBanners = settings.banners.filter((_, i) => i !== index);
+    setSettings(prev => ({ ...prev, banners: newBanners }));
+  };
+
   const tabs = [
     { id: 'general', label: 'General Settings', icon: Globe },
+    { id: 'banners', label: 'Frontend Banners', icon: Image },
     { id: 'contact', label: 'Contact Info', icon: Phone },
     { id: 'social', label: 'Social Media', icon: Share2 },
     { id: 'security', label: 'Content Security', icon: Lock },
@@ -268,6 +308,132 @@ export default function SettingsDashboard() {
                  <button onClick={fetchSettings} className="px-6 py-2.5 border border-gray-200 bg-white text-text-main rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors">Reset</button>
                  <button onClick={() => handleSave('general')} disabled={isSaving} className="flex items-center gap-2 px-6 py-2.5 bg-brand-primary text-white rounded-lg text-sm font-bold hover:bg-brand-primary/90 shadow-sm transition-colors disabled:opacity-50">
                    <Save className="w-4 h-4" /> {isSaving ? 'Saving...' : 'Save Changes'}
+                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Frontend Banners Tab */}
+          {activeTab === 'banners' && (
+            <div className="space-y-8 animate-fade-in max-w-4xl">
+              <div className="border-b border-gray-100 pb-4 flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-bold text-text-main">Frontend Banners</h2>
+                  <p className="text-sm text-gray-500 mt-1">Manage the sliding banners shown on the home page.</p>
+                </div>
+                <button 
+                  onClick={handleAddBanner} 
+                  disabled={settings.banners.length >= 3}
+                  className="px-4 py-2 bg-brand-primary/10 text-brand-primary rounded-lg text-sm font-bold hover:bg-brand-primary/20 disabled:opacity-50 transition-colors"
+                >
+                  + Add Banner
+                </button>
+              </div>
+
+              {/* Notice */}
+              <div className="bg-blue-50 border border-blue-100 text-blue-800 p-4 rounded-xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-sm">Banner Specifications</p>
+                  <p className="text-xs mt-1">Recommended Banner Size: <strong>1920x600 pixels</strong>. Maximum 3 banners allowed. High-quality JPG or WEBP formats are recommended.</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {settings.banners.map((banner, index) => (
+                  <div key={index} className="bg-white border border-gray-200 rounded-xl p-6 relative">
+                    <button 
+                      onClick={() => handleRemoveBanner(index)}
+                      className="absolute top-4 right-4 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Remove Banner"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                    
+                    <h3 className="font-bold text-text-main mb-4">Banner {index + 1}</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Image Upload Area */}
+                      <div>
+                        <label className="block text-sm font-medium text-text-main mb-1.5">Banner Image (1920x600)</label>
+                        <label className="border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 p-2 flex flex-col items-center justify-center hover:border-brand-primary hover:bg-brand-primary/5 cursor-pointer transition-colors text-center relative block min-h-[160px] overflow-hidden group">
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleBannerUpload(index, e)} />
+                          {banner.imageUrl ? (
+                            <>
+                              <img src={banner.imageUrl} alt={`Banner ${index + 1}`} className="absolute inset-0 w-full h-full object-cover group-hover:opacity-50 transition-opacity" />
+                              <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-sm">
+                                <Upload className="w-6 h-6 text-white mb-2" />
+                                <span className="text-sm font-medium text-white">Click to change</span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="p-6">
+                              <Upload className="w-6 h-6 text-brand-primary/50 mb-2 mx-auto" />
+                              <span className="text-sm font-medium text-text-main block">Click to upload banner</span>
+                              <span className="text-xs text-gray-400 mt-1 block">1920x600 recommended</span>
+                            </div>
+                          )}
+                        </label>
+                      </div>
+
+                      {/* Banner Details */}
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-text-main mb-1.5">Title / Alt Text (White Text)</label>
+                          <input type="text" value={banner.title} onChange={(e) => handleBannerChange(index, 'title', e.target.value)} placeholder="e.g. ADVANCING RADIOLOGY EDUCATION." className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-main mb-1.5">Highlight Text (Gold Text)</label>
+                          <input type="text" value={banner.highlightText || ''} onChange={(e) => handleBannerChange(index, 'highlightText', e.target.value)} placeholder="e.g. EMPOWERING RADIOLOGISTS." className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-main mb-1.5">Description</label>
+                          <textarea rows={2} value={banner.description || ''} onChange={(e) => handleBannerChange(index, 'description', e.target.value)} placeholder="e.g. Concept-oriented learning with expert guidance..." className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary resize-none" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-text-main mb-1.5">Primary Button Name</label>
+                            <input type="text" value={banner.buttonText || ''} onChange={(e) => handleBannerChange(index, 'buttonText', e.target.value)} placeholder="e.g. EXPLORE COURSES" className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-text-main mb-1.5">Primary Button Link</label>
+                            <input type="text" value={banner.link || ''} onChange={(e) => handleBannerChange(index, 'link', e.target.value)} placeholder="e.g. /courses" className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary" />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-text-main mb-1.5">Secondary Button Name</label>
+                            <input type="text" value={banner.button2Text || ''} onChange={(e) => handleBannerChange(index, 'button2Text', e.target.value)} placeholder="e.g. ABOUT US" className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-text-main mb-1.5">Secondary Button Link</label>
+                            <input type="text" value={banner.button2Link || ''} onChange={(e) => handleBannerChange(index, 'button2Link', e.target.value)} placeholder="e.g. #about" className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary" />
+                          </div>
+                        </div>
+                        <label className="flex items-center gap-3 cursor-pointer pt-2">
+                          <input type="checkbox" checked={banner.isActive} onChange={(e) => handleBannerChange(index, 'isActive', e.target.checked)} className="w-4 h-4 text-brand-primary rounded border-gray-300 focus:ring-brand-primary" />
+                          <span className="text-sm font-medium text-text-main">Enable Banner</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {settings.banners.length === 0 && (
+                  <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50">
+                    <Image className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <h3 className="text-lg font-bold text-text-main">No Banners Configured</h3>
+                    <p className="text-sm text-gray-500 mt-1 mb-4">Add your first banner to display a slider on the home page.</p>
+                    <button onClick={handleAddBanner} className="px-6 py-2 bg-brand-primary text-white rounded-lg text-sm font-bold shadow-sm">
+                      + Add Banner
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-gray-100">
+                 <button onClick={() => handleSave('banners')} disabled={isSaving} className="flex items-center gap-2 px-6 py-2.5 bg-brand-primary text-white rounded-lg text-sm font-bold hover:bg-brand-primary/90 shadow-sm transition-colors disabled:opacity-50">
+                   <Save className="w-4 h-4" /> {isSaving ? 'Saving...' : 'Save Banners'}
                  </button>
               </div>
             </div>

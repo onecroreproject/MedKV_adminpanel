@@ -78,8 +78,8 @@ export default function WebRTCHost() {
   
   // Lobby Media State (pre-join)
   const [lobbyStream, setLobbyStream] = useState(null);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);     // Default OFF
+  const [isVideoOff, setIsVideoOff] = useState(true); // Default OFF
   const [mediaError, setMediaError] = useState('');
   const myVideoRef = useRef();
 
@@ -219,7 +219,7 @@ export default function WebRTCHost() {
 function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const navigate = useNavigate();
   
-  const { localParticipant } = useLocalParticipant();
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const participants = useParticipants();
   const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare]);
 
@@ -301,6 +301,13 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
+
+  // Ensure mic and camera are disabled immediately on room join
+  useEffect(() => {
+    if (!localParticipant) return;
+    localParticipant.setMicrophoneEnabled(false);
+    localParticipant.setCameraEnabled(false);
+  }, [localParticipant?.sid]);
 
   const toggleMute = () => {
     localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled);
