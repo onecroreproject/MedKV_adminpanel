@@ -77,9 +77,10 @@ export default function CourseDetails() {
                 <span className="text-xs font-medium bg-brand-accent/20 text-brand-accent px-2 py-0.5 rounded uppercase tracking-wider">{course.category?.name || course.category}</span>
               </div>
               <h1 className="text-2xl md:text-3xl font-bold text-text-main">{course.title}</h1>
-              <p className="text-text-muted mt-2 max-w-2xl text-sm leading-relaxed">
-                {course.description}
-              </p>
+              <div 
+                className="text-text-muted mt-2 max-w-2xl text-sm leading-relaxed" 
+                dangerouslySetInnerHTML={{ __html: course.description }} 
+              />
             </div>
             
             <div className="shrink-0 bg-gray-50 p-4 rounded-xl border border-gray-100 w-full md:w-64">

@@ -7,8 +7,8 @@ import { createCourse, updateCourse, getCourseById } from '../../services/course
 import { getFaculty } from '../../services/facultyService';
 import { getCategories } from '../../services/categoryService';
 import { uploadFile } from '../../services/uploadService';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import { Controller } from 'react-hook-form';
 
 const steps = [
@@ -64,6 +64,7 @@ export default function AddCourse() {
           setValue('title', course.title);
           setValue('category', course.category?._id || course.category);
           setValue('languages', course.languages || []);
+          setValue('features', course.features || []);
           setValue('fullDesc', course.description);
           setValue('difficulty', course.level || '');
           setValue('regularPrice', course.originalPrice || course.price);
@@ -72,6 +73,7 @@ export default function AddCourse() {
           setValue('previewVideoUrl', course.previewVideoUrl || '');
           setValue('thumbnail', course.thumbnail || '');
           setValue('banner', course.banner || '');
+          setValue('isImportant', course.isImportant || false);
           
           setValue('learningOutcomes', course.learningOutcomes || []);
           setValue('liveSessions', course.liveSessions || []);
@@ -138,9 +140,11 @@ export default function AddCourse() {
         title: data.title,
         slug: data.slug || undefined,
         description: data.fullDesc || data.shortDesc || '',
+        isImportant: data.isImportant || false,
         category: data.category || undefined,
         level: data.difficulty || '',
         languages: data.languages || [],
+        features: data.features || [],
         price: finalPrice || 0,
         originalPrice: finalOriginalPrice || 0,
         previewVideoUrl: data.previewVideoUrl || '',
@@ -261,6 +265,13 @@ export default function AddCourse() {
                     <input type="checkbox" value="Hindi" {...register('languages')} className="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
                     <span className="text-sm text-text-main">Hindi</span>
                   </label>
+                </div>
+              </div>
+              <div className="md:col-span-2 mt-2 p-4 bg-yellow-50 border border-yellow-200 rounded-xl flex items-start space-x-3">
+                <input type="checkbox" {...register('isImportant')} className="mt-1 w-4 h-4 text-brand-primary rounded border-gray-300 focus:ring-brand-primary cursor-pointer" />
+                <div>
+                  <label className="text-sm font-bold text-yellow-900 block cursor-pointer">Mark as Important Course</label>
+                  <p className="text-xs text-yellow-700 mt-1">Checking this box will pin this course to the top of the Course Catalog and Home Page slider.</p>
                 </div>
               </div>
               <div className="md:col-span-2">
