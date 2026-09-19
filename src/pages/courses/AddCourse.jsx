@@ -7,6 +7,9 @@ import { createCourse, updateCourse, getCourseById } from '../../services/course
 import { getFaculty } from '../../services/facultyService';
 import { getCategories } from '../../services/categoryService';
 import { uploadFile } from '../../services/uploadService';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import { Controller } from 'react-hook-form';
 
 const steps = [
   { id: 1, name: 'Basic Info' },
@@ -262,11 +265,35 @@ export default function AddCourse() {
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-text-main mb-1.5">Short Description</label>
-                <textarea {...register('shortDesc')} rows={2} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20" placeholder="Brief summary of the course..." />
+                <Controller
+                  name="shortDesc"
+                  control={control}
+                  render={({ field }) => (
+                    <ReactQuill 
+                      theme="snow" 
+                      value={field.value || ''} 
+                      onChange={field.onChange} 
+                      placeholder="Brief summary of the course..." 
+                      className="bg-white rounded-lg"
+                    />
+                  )}
+                />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-text-main mb-1.5">Full Description</label>
-                <textarea {...register('fullDesc')} rows={5} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20" placeholder="Detailed course description..." />
+                <Controller
+                  name="fullDesc"
+                  control={control}
+                  render={({ field }) => (
+                    <ReactQuill 
+                      theme="snow" 
+                      value={field.value || ''} 
+                      onChange={field.onChange} 
+                      placeholder="Detailed course description..." 
+                      className="bg-white rounded-lg"
+                    />
+                  )}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-main mb-1.5">Difficulty Level (Optional)</label>
