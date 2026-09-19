@@ -197,7 +197,7 @@ export default function AddCourse() {
       }
     } catch (err) {
       console.error(err);
-      alert('Failed to upload image');
+      alert('Failed to upload image: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -213,7 +213,7 @@ export default function AddCourse() {
       }
     } catch (err) {
       console.error(err);
-      alert('Failed to upload video');
+      alert('Failed to upload video: ' + (err.response?.data?.message || err.message));
     }
   };
 
