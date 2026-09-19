@@ -144,7 +144,7 @@ export default function AddCourse() {
         category: data.category || undefined,
         level: data.difficulty || '',
         languages: data.languages || [],
-        features: data.features || [],
+        features: Array.isArray(data.features) ? data.features : (data.features ? [data.features] : []),
         price: finalPrice || 0,
         originalPrice: finalOriginalPrice || 0,
         previewVideoUrl: data.previewVideoUrl || '',
