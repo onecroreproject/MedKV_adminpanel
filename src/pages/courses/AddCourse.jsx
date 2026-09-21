@@ -326,7 +326,7 @@ export default function AddCourse() {
             <h3 className="text-lg font-bold text-text-main border-b border-gray-100 pb-2">Course Media</h3>
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-text-main mb-2">Course Thumbnail (1:1 Ratio)</label>
+                <label className="block text-sm font-medium text-text-main mb-2">Course Thumbnail (16:9 Ratio)</label>
                 <label className="block w-full h-40 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-100 hover:border-brand-primary cursor-pointer transition-colors overflow-hidden">
                   {watch('thumbnail') ? (
                     <img src={getFullUrl(watch('thumbnail'))} alt="Thumbnail" className="w-full h-full object-contain bg-black/5" />
@@ -334,7 +334,7 @@ export default function AddCourse() {
                     <>
                       <Upload className="w-8 h-8 mb-2" />
                       <span className="text-sm font-medium">Drag & Drop or Click to Upload</span>
-                      <span className="text-xs mt-1">Recommended size: 600x600px. Max 2MB.</span>
+                      <span className="text-xs mt-1">Recommended size: 1280x720px (16:9). Max 2MB.</span>
                     </>
                   )}
                   <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'thumbnail')} />

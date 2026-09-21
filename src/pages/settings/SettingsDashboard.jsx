@@ -43,6 +43,15 @@ export default function SettingsDashboard() {
     }
   };
 
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
+    const baseUrl = import.meta.env.VITE_API_URL 
+      ? import.meta.env.VITE_API_URL.replace('/api/v1', '') 
+      : 'http://localhost:5000';
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   const handleSave = async (section) => {
     setIsSaving(true);
     try {
@@ -206,7 +215,7 @@ export default function SettingsDashboard() {
                       {settings.general.logoUrl || default_icon_logo ? (
                         <div className="flex flex-col items-center">
                           <img 
-                            src={settings.general.logoUrl || default_icon_logo} 
+                            src={settings.general.logoUrl ? getFullUrl(settings.general.logoUrl) : default_icon_logo} 
                             alt="Current Icon Logo" 
                             className="h-16 w-auto object-contain mb-3 opacity-90 group-hover:opacity-100 transition-opacity" 
                           />
@@ -229,7 +238,7 @@ export default function SettingsDashboard() {
                       {settings.general.nameLogoUrl || default_name_logo ? (
                         <div className="flex flex-col items-center">
                           <img 
-                            src={settings.general.nameLogoUrl || default_name_logo} 
+                            src={settings.general.nameLogoUrl ? getFullUrl(settings.general.nameLogoUrl) : default_name_logo} 
                             alt="Current Name Logo" 
                             className="h-8 w-auto object-contain mb-3 opacity-90 group-hover:opacity-100 transition-opacity" 
                           />
@@ -251,7 +260,7 @@ export default function SettingsDashboard() {
                       <input type="file" accept=".ico,.png,image/*" className="hidden" onChange={(e) => handleFileUpload('faviconUrl', e)} />
                       {settings.general.faviconUrl ? (
                          <div className="flex flex-col items-center">
-                           <img src={settings.general.faviconUrl} alt="Favicon" className="w-8 h-8 mb-3" />
+                           <img src={getFullUrl(settings.general.faviconUrl)} alt="Favicon" className="w-8 h-8 mb-3" />
                            <span className="text-sm font-medium text-brand-primary">Click to change Favicon</span>
                          </div>
                       ) : (
@@ -272,12 +281,12 @@ export default function SettingsDashboard() {
                   <div className="bg-bg-sidebar px-4 py-3 rounded-t-lg flex items-center justify-between border-b border-gray-800">
                      <div className="flex items-center gap-2">
                         <img 
-                           src={settings.general.logoUrl || default_icon_logo} 
+                           src={settings.general.logoUrl ? getFullUrl(settings.general.logoUrl) : default_icon_logo} 
                            alt="Icon Preview" 
                            className="h-6 w-auto object-contain" 
                         />
                         <img 
-                           src={settings.general.nameLogoUrl || default_name_logo} 
+                           src={settings.general.nameLogoUrl ? getFullUrl(settings.general.nameLogoUrl) : default_name_logo} 
                            alt="Name Preview" 
                            className="h-4 w-auto object-contain hidden sm:block" 
                         />
@@ -360,7 +369,7 @@ export default function SettingsDashboard() {
                           <input type="file" accept="image/*" className="hidden" onChange={(e) => handleBannerUpload(index, e)} />
                           {banner.imageUrl ? (
                             <>
-                              <img src={banner.imageUrl} alt={`Banner ${index + 1}`} className="absolute inset-0 w-full h-full object-cover group-hover:opacity-50 transition-opacity" />
+                              <img src={getFullUrl(banner.imageUrl)} alt={`Banner ${index + 1}`} className="absolute inset-0 w-full h-full object-cover group-hover:opacity-50 transition-opacity" />
                               <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-sm">
                                 <Upload className="w-6 h-6 text-white mb-2" />
                                 <span className="text-sm font-medium text-white">Click to change</span>
