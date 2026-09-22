@@ -37,7 +37,8 @@ export default function AddCourse() {
       pacsCases: [],
       mockExams: [],
       testimonials: [],
-      faqs: []
+      faqs: [],
+      earlyBird: { enabled: false, price: '', limit: '' }
     }
   });
 
@@ -81,6 +82,12 @@ export default function AddCourse() {
           setValue('mockExams', course.mockExams || []);
           setValue('testimonials', course.testimonials || []);
           setValue('faqs', course.faqs || []);
+          
+          if (course.earlyBird) {
+            setValue('earlyBird.enabled', course.earlyBird.enabled || false);
+            setValue('earlyBird.price', course.earlyBird.price || '');
+            setValue('earlyBird.limit', course.earlyBird.limit || '');
+          }
         }
       } catch (err) {
         console.error('Failed to fetch initial data', err);
@@ -158,7 +165,12 @@ export default function AddCourse() {
         pacsCases: data.pacsCases || [],
         mockExams: data.mockExams || [],
         testimonials: data.testimonials || [],
-        faqs: data.faqs || []
+        faqs: data.faqs || [],
+        earlyBird: {
+          enabled: data.earlyBird?.enabled || false,
+          price: Number(data.earlyBird?.price) || 0,
+          limit: Number(data.earlyBird?.limit) || 0
+        }
       };
       
       if (isEditing) {
@@ -415,6 +427,31 @@ export default function AddCourse() {
                   <span className="text-sm font-medium text-text-main">Featured Course</span>
                 </label>
               </div>
+            </div>
+            
+            <div className="pt-6 border-t border-gray-100">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="relative">
+                  <input type="checkbox" {...register('earlyBird.enabled')} className="sr-only peer" id="earlyBirdToggle" />
+                  <div className="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-brand-primary transition-colors cursor-pointer" onClick={() => setValue('earlyBird.enabled', !watch('earlyBird.enabled'))}></div>
+                  <div className={`absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition-all pointer-events-none ${watch('earlyBird.enabled') ? 'translate-x-5' : ''}`}></div>
+                </div>
+                <label htmlFor="earlyBirdToggle" className="text-sm font-bold text-text-main cursor-pointer">Enable Early Bird Registration Offer</label>
+              </div>
+              
+              {watch('earlyBird.enabled') && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                  <div>
+                    <label className="block text-sm font-medium text-text-main mb-1.5">Early Bird Price (₹)</label>
+                    <input {...register('earlyBird.price')} type="number" className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20" placeholder="0.00" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-main mb-1.5">Registration Limit (Spots)</label>
+                    <input {...register('earlyBird.limit')} type="number" className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20" placeholder="e.g. 50" />
+                    <p className="text-xs text-blue-800 mt-1.5">Offer ends automatically after this many enrollments.</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
