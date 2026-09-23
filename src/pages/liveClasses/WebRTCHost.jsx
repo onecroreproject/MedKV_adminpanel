@@ -445,9 +445,12 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
             <div className="flex-1 w-full relative rounded-lg overflow-hidden border border-slate-800 group">
               {localParticipant && <VoiceIndicator participant={localParticipant} />}
               {(() => {
+                const isScreenShareOn = localParticipant?.isScreenShareEnabled;
+                const isCameraOn = localParticipant?.isCameraEnabled;
+
                 const localTracks = tracks.filter(t => t.participant.isLocal);
-                const screenShareTrack = localTracks.find(t => t.source === Track.Source.ScreenShare);
-                const cameraTrack = localTracks.find(t => t.source === Track.Source.Camera);
+                const screenShareTrack = isScreenShareOn ? localTracks.find(t => t.source === Track.Source.ScreenShare) : null;
+                const cameraTrack = isCameraOn ? localTracks.find(t => t.source === Track.Source.Camera) : null;
                 const activeTrack = screenShareTrack || cameraTrack;
 
                 if (activeTrack) {
