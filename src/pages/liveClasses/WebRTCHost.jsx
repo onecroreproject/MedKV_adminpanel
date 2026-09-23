@@ -19,7 +19,43 @@ import {
   useIsSpeaking
 } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { Track } from 'livekit-client';
+import { Track, AudioPresets } from 'livekit-client';
+
+const LOW_LATENCY_OPTIONS = {
+  adaptiveStream: false,
+  dynacast: true,
+  stopLocalTrackOnUnpublish: true,
+  reconnectPolicy: {
+    nextRetryDelayInMs: (context) => {
+      if (context.retryCount === 0) return 300;
+      if (context.retryCount < 4)  return 1000 * context.retryCount;
+      return null;
+    },
+  },
+  audioCaptureDefaults: {
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+  },
+  audioOutput: {
+    deviceId: 'default',
+  },
+  publishDefaults: {
+    audioPreset: AudioPresets.music,
+    videoCodec: 'vp8',
+    simulcast: true,
+    videoEncoding: {
+      maxBitrate: 2_500_000,
+      maxFramerate: 30,
+    },
+    screenShareEncoding: {
+      maxBitrate: 3_000_000,
+      maxFramerate: 30,
+    },
+    dtx: true,
+    red: true,
+  },
+};
 
 const playSound = (type) => {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -152,7 +188,7 @@ export default function WebRTCHost() {
       token={token}
       serverUrl={import.meta.env.VITE_LIVEKIT_URL}
       connect={true}
-      options={{ adaptiveStream: true, dynacast: true, stopLocalTrackOnUnpublish: true }}
+      options={LOW_LATENCY_OPTIONS}
       className="flex flex-col h-[100dvh] bg-slate-900 text-white relative"
       data-lk-theme="default"
     >
