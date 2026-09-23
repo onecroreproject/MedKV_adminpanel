@@ -183,6 +183,15 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   }, [chatMessages.length]);
 
   useEffect(() => {
+    // Establish socket connection for waiting room and hand raise events
+    webrtcService.connect(roomId, user._id || user.id, user.role, user.name);
+
+    return () => {
+      webrtcService.disconnect();
+    };
+  }, [roomId, user]);
+
+  useEffect(() => {
 
     webrtcService.onHandRaise = (data) => {
       playSound('hand');
