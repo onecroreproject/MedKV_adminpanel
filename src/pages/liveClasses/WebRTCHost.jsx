@@ -141,16 +141,8 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const participants = useParticipants();
-  const allTracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare], { onlySubscribed: false });
-  // Only show the teacher's tracks in the main grid to prevent students from taking over the screen
-  const tracks = allTracks.filter(t => {
-    try {
-      const meta = JSON.parse(t.participant.metadata || '{}');
-      return meta.isTeacher === true || t.participant.isLocal;
-    } catch (e) {
-      return t.participant.isLocal; // Fallback to local if metadata parsing fails
-    }
-  });
+  // Fetch ALL tracks so the host can see students who turn on their camera
+  const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare], { onlySubscribed: false });
   const { send: sendChatMessage, chatMessages } = useChat();
 
   const [chatOpen, setChatOpen] = useState(true);
@@ -195,16 +187,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   }, [chatMessages.length]);
 
   useEffect(() => {
-    // Establish socket connection for waiting room and hand raise events
-    webrtcService.connect(roomId, user._id || user.id, user.role, user.name);
-
-    return () => {
-      webrtcService.disconnect();
-    };
-  }, [roomId, user]);
-
-  useEffect(() => {
-
+    // Assign event listeners BEFORE connecting to prevent race conditions
     webrtcService.onHandRaise = (data) => {
       playSound('hand');
       setToastMessage({ name: data.name, show: true });
@@ -218,7 +201,16 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
         return [...prev, data];
       });
     };
-  }, [user._id]);
+
+    // Establish socket connection for waiting room and hand raise events
+    webrtcService.connect(roomId, user._id || user.id, user.role, user.name);
+
+    return () => {
+      webrtcService.onHandRaise = null;
+      webrtcService.onStudentWaiting = null;
+      webrtcService.disconnect();
+    };
+  }, [roomId, user]);
 
   const admitParticipant = (id) => {
     webrtcService.admitStudent(id);
@@ -419,20 +411,27 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
         <div className={`flex flex-col p-2 md:p-4 relative transition-all duration-300 ${chatOpen ? 'h-[35%] md:h-auto md:flex-1' : 'flex-1'}`}>
           
           {/* Google Meet Style Grid Layout */}
-          <div ref={mainVideoWrapperRef} className="flex-1 rounded-xl overflow-hidden relative border border-slate-700 bg-black">
-            {tracks.length > 0 ? (
-              <GridLayout tracks={tracks} style={{ height: '100%', width: '100%' }}>
-                <ParticipantTile />
-              </GridLayout>
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 gap-4 relative">
+          <div ref={mainVideoWrapperRef} className="flex-1 flex flex-col md:flex-row gap-2 rounded-xl overflow-hidden relative border border-slate-700 bg-black p-1">
+            
+            {/* If Teacher Camera is OFF, manually show the Avatar Tile */}
+            {!isCameraEnabled && (
+              <div className="flex-1 h-full min-h-[300px] flex flex-col items-center justify-center bg-slate-900 gap-4 relative border border-slate-800 rounded-xl overflow-hidden">
                 <div className="w-32 h-32 bg-slate-700 rounded-full flex items-center justify-center text-4xl font-bold text-slate-300 shadow-xl border-4 border-slate-800">
                   {user.name ? user.name.charAt(0).toUpperCase() : 'A'}
                 </div>
                 <div className="absolute bottom-4 left-4 bg-black/60 px-3 py-1 rounded text-white text-sm flex items-center gap-2">
-                  <MicOff size={14} className="text-red-400" />
+                  {!isMicrophoneEnabled ? <MicOff size={14} className="text-red-400" /> : <Mic size={14} className="text-green-400" />}
                   {user.name || 'Admin'}
                 </div>
+              </div>
+            )}
+
+            {/* Grid Layout for all active tracks (Teacher video + Student videos) */}
+            {tracks.length > 0 && (
+              <div className="flex-1 h-full min-h-[300px]">
+                <GridLayout tracks={tracks} style={{ height: '100%', width: '100%' }}>
+                  <ParticipantTile />
+                </GridLayout>
               </div>
             )}
             
