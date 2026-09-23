@@ -410,28 +410,36 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
         {/* Video Area */}
         <div className={`flex flex-col p-2 md:p-4 relative transition-all duration-300 ${chatOpen ? 'h-[35%] md:h-auto md:flex-1' : 'flex-1'}`}>
           
-          {/* Google Meet Style Grid Layout */}
-          <div ref={mainVideoWrapperRef} className="flex-1 flex flex-col md:flex-row gap-2 rounded-xl overflow-hidden relative border border-slate-700 bg-black p-1">
+          {/* Main Video Wrapper */}
+          <div ref={mainVideoWrapperRef} className="flex-1 flex flex-col gap-2 rounded-xl overflow-hidden relative border border-slate-700 bg-black p-1">
             
-            {/* If Teacher Camera is OFF, manually show the Avatar Tile */}
-            {!isCameraEnabled && (
-              <div className="flex-1 h-full min-h-[300px] flex flex-col items-center justify-center bg-slate-900 gap-4 relative border border-slate-800 rounded-xl overflow-hidden">
-                <div className="w-32 h-32 bg-slate-700 rounded-full flex items-center justify-center text-4xl font-bold text-slate-300 shadow-xl border-4 border-slate-800">
-                  {user.name ? user.name.charAt(0).toUpperCase() : 'A'}
-                </div>
-                <div className="absolute bottom-4 left-4 bg-black/60 px-3 py-1 rounded text-white text-sm flex items-center gap-2">
-                  {!isMicrophoneEnabled ? <MicOff size={14} className="text-red-400" /> : <Mic size={14} className="text-green-400" />}
-                  {user.name || 'Admin'}
-                </div>
-              </div>
-            )}
-
-            {/* Grid Layout for all active tracks (Teacher video + Student videos) */}
-            {tracks.length > 0 && (
-              <div className="flex-1 h-full min-h-[300px]">
-                <GridLayout tracks={tracks} style={{ height: '100%', width: '100%' }}>
+            {/* Main Screen: Admin (Host) ALWAYS */}
+            <div className="flex-1 w-full relative rounded-lg overflow-hidden border border-slate-800">
+              {isCameraEnabled ? (
+                <GridLayout tracks={tracks.filter(t => t.participant.isLocal)} style={{ height: '100%', width: '100%' }}>
                   <ParticipantTile />
                 </GridLayout>
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 gap-4 relative">
+                  <div className="w-32 h-32 bg-slate-700 rounded-full flex items-center justify-center text-4xl font-bold text-slate-300 shadow-xl border-4 border-slate-800">
+                    {user.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                  </div>
+                  <div className="absolute bottom-4 left-4 bg-black/60 px-3 py-1 rounded text-white text-sm flex items-center gap-2">
+                    {!isMicrophoneEnabled ? <MicOff size={14} className="text-red-400" /> : <Mic size={14} className="text-green-400" />}
+                    {user.name || 'Admin'}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Horizontal Scroll Row for Students */}
+            {tracks.filter(t => !t.participant.isLocal).length > 0 && (
+              <div className="h-28 md:h-36 w-full shrink-0 flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-slate-600 px-1">
+                {tracks.filter(t => !t.participant.isLocal).map(t => (
+                  <div key={t.publication.trackSid} className="h-full aspect-video shrink-0 rounded-lg overflow-hidden border border-slate-700 relative bg-slate-900">
+                    <ParticipantTile trackRef={t} />
+                  </div>
+                ))}
               </div>
             )}
             
