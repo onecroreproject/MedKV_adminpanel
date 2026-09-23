@@ -445,9 +445,9 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
             <div className="flex-1 w-full relative rounded-lg overflow-hidden border border-slate-800 group">
               {localParticipant && <VoiceIndicator participant={localParticipant} />}
               {isCameraEnabled ? (
-                <GridLayout tracks={tracks.filter(t => t.participant.isLocal)} style={{ height: '100%', width: '100%' }}>
-                  <ParticipantTile />
-                </GridLayout>
+                <div className="w-full h-full">
+                  <ParticipantTile participant={localParticipant} style={{ height: '100%', width: '100%' }} />
+                </div>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 gap-4 relative">
                   <div className="w-32 h-32 bg-slate-700 rounded-full flex items-center justify-center text-4xl font-bold text-slate-300 shadow-xl border-4 border-slate-800">
