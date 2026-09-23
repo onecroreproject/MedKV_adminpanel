@@ -127,7 +127,7 @@ export default function WebRTCHost() {
       serverUrl={import.meta.env.VITE_LIVEKIT_URL}
       connect={true}
       options={{ adaptiveStream: true, dynacast: true, stopLocalTrackOnUnpublish: true }}
-      className="flex flex-col h-screen bg-slate-900 text-white relative"
+      className="flex flex-col h-[100dvh] bg-slate-900 text-white relative"
       data-lk-theme="default"
     >
       <ActiveHostClassroom user={user} roomId={roomId} isTeacher={isTeacher} courseName={courseName} />
@@ -336,25 +336,25 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
     }
   };
 
-  const handleMuteAll = async () => {
+  const handleForceUnmute = async (identity) => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/mute-all`, { roomId }, {
+      await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/unmute-participant`, { roomId, identity }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      webrtcService.muteAll();
+      webrtcService.unmuteParticipant(identity);
     } catch (err) {
-      console.error("Failed to mute all", err);
+      console.error("Failed to unmute participant", err);
     }
   };
 
-  const handleCameraOffAll = async () => {
+  const handleForceCameraOn = async (identity) => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/camera-off-all`, { roomId }, {
+      await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/camera-on-participant`, { roomId, identity }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      webrtcService.cameraOffAll();
+      webrtcService.cameraOnParticipant(identity);
     } catch (err) {
-      console.error("Failed to turn camera off all", err);
+      console.error("Failed to turn camera on", err);
     }
   };
 
@@ -381,31 +381,33 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
       )}
 
       {/* Header */}
-      <header className="flex justify-between items-center px-6 py-3 bg-slate-800 border-b border-slate-700">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
-             <img src={darkLogo} alt="Logo" className="h-8 object-contain" />
-             <h1 className="font-bold text-lg">Live Classroom {isRecording && <span className="text-red-500 ml-2 animate-pulse">● Recording</span>}</h1>
+      <header className="flex justify-between items-center px-3 md:px-6 py-2 md:py-3 bg-slate-800 border-b border-slate-700 shrink-0">
+        <div className="flex items-center gap-2 md:gap-4 truncate">
+          <div className="flex items-center gap-2 md:gap-3 shrink-0">
+             <img src={darkLogo} alt="Logo" className="h-6 md:h-8 object-contain" />
+             <h1 className="font-bold text-sm md:text-lg truncate">Live Classroom {isRecording && <span className="text-red-500 ml-2 animate-pulse hidden md:inline">● Recording</span>}</h1>
           </div>
-          <div className="h-6 w-px bg-slate-600 mx-2"></div>
-          <div className="flex items-center gap-3">
-             <img src={user.profilePicture || "https://ui-avatars.com/api/?name=" + user.name + "&background=random"} alt="Host" className="w-9 h-9 rounded-full border border-slate-500" />
-             <div className="flex flex-col">
-               <span className="font-medium text-sm leading-tight">{user.name}</span>
-               <span className="text-xs text-slate-400">Host</span>
+          <div className="h-6 w-px bg-slate-600 mx-1 md:mx-2 shrink-0"></div>
+          <div className="flex items-center gap-2 md:gap-3 shrink-0">
+             <img src={user.profilePicture || "https://ui-avatars.com/api/?name=" + user.name + "&background=random"} alt="Host" className="w-7 h-7 md:w-9 md:h-9 rounded-full border border-slate-500" />
+             <div className="flex flex-col hidden sm:flex">
+               <span className="font-medium text-xs md:text-sm leading-tight truncate">{user.name}</span>
+               <span className="text-[10px] md:text-xs text-slate-400">Host</span>
              </div>
           </div>
         </div>
-        <div className="flex gap-4 items-center">
-          <span className="text-sm bg-slate-700 px-3 py-1 rounded-full">{participants.length} Participants</span>
+        <div className="flex gap-2 md:gap-4 items-center shrink-0">
+          <span className="text-xs md:text-sm bg-slate-700 px-2 md:px-3 py-1 rounded-full flex items-center gap-1">
+            <span className="font-bold">{participants.length}</span> <span className="hidden sm:inline">Participants</span>
+          </span>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
         
         {/* Video Area */}
-        <div className="flex-1 flex flex-col p-4 relative">
+        <div className={`flex flex-col p-2 md:p-4 relative transition-all duration-300 ${chatOpen ? 'h-[35%] md:h-auto md:flex-1' : 'flex-1'}`}>
           
           {/* Google Meet Style Grid Layout */}
           <div ref={mainVideoWrapperRef} className="flex-1 rounded-xl overflow-hidden relative border border-slate-700 bg-black">
@@ -424,7 +426,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
 
         {/* Sidebar (Chat / Participants) */}
         {chatOpen && (
-          <div className="w-80 bg-slate-800 border-l border-slate-700 flex flex-col">
+          <div className="w-full md:w-80 bg-slate-800 md:border-l border-t md:border-t-0 border-slate-700 flex flex-col flex-1 md:flex-none overflow-hidden min-h-0">
             <div className="flex border-b border-slate-700">
               <button 
                 onClick={() => setActiveTab('chat')} 
@@ -529,17 +531,21 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
                       {!p.isLocal && (
                         <div className="flex gap-2">
                           {!p.isMicrophoneEnabled ? (
-                            <span className="p-1.5 text-red-400" title="Muted"><MicOff size={14} /></span>
+                            <button onClick={() => handleForceUnmute(p.identity)} className="p-1.5 bg-red-500/20 hover:bg-green-500 rounded text-red-400 hover:text-white transition" title="Force Unmute">
+                              <MicOff size={14} />
+                            </button>
                           ) : (
                             <button onClick={() => handleForceMute(p.identity)} className="p-1.5 bg-slate-600 hover:bg-red-500 rounded text-slate-300 transition" title="Force Mute">
-                              <MicOff size={14} />
+                              <Mic size={14} />
                             </button>
                           )}
                           {!p.isCameraEnabled ? (
-                            <span className="p-1.5 text-red-400" title="Camera Off"><VideoOff size={14} /></span>
+                            <button onClick={() => handleForceCameraOn(p.identity)} className="p-1.5 bg-red-500/20 hover:bg-green-500 rounded text-red-400 hover:text-white transition" title="Force Camera On">
+                              <VideoOff size={14} />
+                            </button>
                           ) : (
                             <button onClick={() => handleForceCameraOff(p.identity)} className="p-1.5 bg-slate-600 hover:bg-red-500 rounded text-slate-300 transition" title="Force Camera Off">
-                              <VideoOff size={14} />
+                              <Video size={14} />
                             </button>
                           )}
                           <button onClick={() => handleKickParticipant(p.identity)} className="p-1.5 bg-slate-600 hover:bg-red-500 rounded text-slate-300 transition" title="Remove Participant">
@@ -557,19 +563,6 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
                   )}
                 </div>
 
-                {/* Global Moderation Toolbar */}
-                <div className="p-3 border-t border-slate-700 bg-slate-800 flex flex-col gap-2">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Room Moderation</h3>
-                  <div className="flex gap-2">
-                    <button onClick={handleMuteAll} className="flex-1 py-1.5 bg-slate-700 hover:bg-red-600 text-white text-xs font-bold rounded transition flex items-center justify-center gap-1">
-                      <MicOff size={12} /> Mute All
-                    </button>
-                    <button onClick={handleCameraOffAll} className="flex-1 py-1.5 bg-slate-700 hover:bg-red-600 text-white text-xs font-bold rounded transition flex items-center justify-center gap-1">
-                      <VideoOff size={12} /> Cam Off All
-                    </button>
-                  </div>
-                </div>
-
               </div>
             )}
           </div>
@@ -577,9 +570,9 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
       </div>
 
       {/* Control Bar */}
-      <footer className="bg-slate-800 p-4 flex justify-between items-center">
-        <div className="flex gap-2"></div>
-        <div className="flex gap-4">
+      <footer className="bg-slate-800 p-2 md:p-4 pb-6 md:pb-4 flex flex-wrap justify-center md:justify-between items-center gap-2 md:gap-4 shrink-0">
+        <div className="hidden md:flex gap-2 w-1/4"></div>
+        <div className="flex gap-2 md:gap-4 justify-center items-center flex-wrap">
           <button onClick={toggleMute} className={`p-3 rounded-full ${!localParticipant.isMicrophoneEnabled ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-600 hover:bg-slate-500'} transition`}>
             {!localParticipant.isMicrophoneEnabled ? <MicOff size={20} /> : <Mic size={20} />}
           </button>
@@ -596,12 +589,12 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
             {isRecording ? <Square size={20} fill="white" /> : <Circle size={20} fill="white" />}
           </button>
           
-          <button onClick={leaveRoom} className="p-3 rounded-full bg-red-600 hover:bg-red-700 transition px-6 font-bold flex items-center gap-2">
-            <PhoneOff size={20} /> End Class
+          <button onClick={leaveRoom} className="px-4 py-2 md:p-3 md:px-6 rounded-full bg-red-600 hover:bg-red-700 transition font-bold flex items-center gap-2 text-sm md:text-base">
+            <PhoneOff size={20} /> <span className="hidden sm:inline">End Class</span>
           </button>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 justify-end md:w-1/4">
           <button onClick={() => setChatOpen(!chatOpen)} className={`p-3 rounded-full ${chatOpen ? 'bg-primary text-white' : 'bg-slate-600 hover:bg-slate-500'} transition relative`} title="Chat">
             <MessageSquare size={20} />
             {unreadChatCount > 0 && !chatOpen && (
