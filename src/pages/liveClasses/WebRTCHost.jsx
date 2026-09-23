@@ -106,10 +106,10 @@ export default function WebRTCHost() {
         <div className="bg-slate-800 p-8 rounded-2xl shadow-xl max-w-2xl w-full flex flex-col items-center">
           <img src={darkLogo} alt="Logo" className="h-12 mb-6 object-contain" />
           <h1 className="text-3xl font-bold mb-6">Ready to join?</h1>
+          <style>{`.lk-prejoin input[type="text"] { display: none !important; }`}</style>
           <PreJoin 
+             defaults={{ username: user.name, videoEnabled: false, audioEnabled: false }}
              onSubmit={handlePreJoinSubmit} 
-             videoEnabled={false} 
-             audioEnabled={false}
           />
         </div>
       </div>
