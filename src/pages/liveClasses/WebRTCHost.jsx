@@ -444,21 +444,32 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
             {/* Main Screen: Admin (Host) ALWAYS */}
             <div className="flex-1 w-full relative rounded-lg overflow-hidden border border-slate-800 group">
               {localParticipant && <VoiceIndicator participant={localParticipant} />}
-              {isCameraEnabled && tracks.filter(t => t.participant.isLocal).length > 0 ? (
-                <GridLayout tracks={tracks.filter(t => t.participant.isLocal)} style={{ height: '100%', width: '100%' }}>
-                  <ParticipantTile />
-                </GridLayout>
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 gap-4 relative">
-                  <div className="w-32 h-32 bg-slate-700 rounded-full flex items-center justify-center text-4xl font-bold text-slate-300 shadow-xl border-4 border-slate-800">
-                    {user.name ? user.name.charAt(0).toUpperCase() : 'A'}
+              {(() => {
+                const localTracks = tracks.filter(t => t.participant.isLocal);
+                const screenShareTrack = localTracks.find(t => t.source === Track.Source.ScreenShare);
+                const cameraTrack = localTracks.find(t => t.source === Track.Source.Camera);
+                const activeTrack = screenShareTrack || cameraTrack;
+
+                if (activeTrack) {
+                  return (
+                    <div className="w-full h-full">
+                      <ParticipantTile trackRef={activeTrack} style={{ height: '100%', width: '100%' }} />
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 gap-4 relative">
+                    <div className="w-32 h-32 bg-slate-700 rounded-full flex items-center justify-center text-4xl font-bold text-slate-300 shadow-xl border-4 border-slate-800">
+                      {user.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                    </div>
+                    <div className="absolute bottom-4 left-4 bg-black/60 px-3 py-1 rounded text-white text-sm flex items-center gap-2">
+                      {!localParticipant.isMicrophoneEnabled ? <MicOff size={14} className="text-red-400" /> : <Mic size={14} className="text-green-400" />}
+                      {user.name || 'Admin'}
+                    </div>
                   </div>
-                  <div className="absolute bottom-4 left-4 bg-black/60 px-3 py-1 rounded text-white text-sm flex items-center gap-2">
-                    {!isMicrophoneEnabled ? <MicOff size={14} className="text-red-400" /> : <Mic size={14} className="text-green-400" />}
-                    {user.name || 'Admin'}
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
 
             {/* Horizontal Scroll Row for Students */}
