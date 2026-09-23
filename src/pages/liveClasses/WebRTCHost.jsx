@@ -570,7 +570,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
       </div>
 
       {/* Control Bar */}
-      <footer className="bg-slate-800 p-2 md:p-4 pb-6 md:pb-4 flex flex-wrap justify-center md:justify-between items-center gap-2 md:gap-4 shrink-0">
+      <footer className="bg-slate-800 pt-3 pb-10 md:p-4 md:pb-4 flex flex-wrap justify-center md:justify-between items-center gap-2 md:gap-4 shrink-0">
         <div className="hidden md:flex gap-2 w-1/4"></div>
         <div className="flex gap-2 md:gap-4 justify-center items-center flex-wrap">
           <button onClick={toggleMute} className={`p-3 rounded-full ${!localParticipant.isMicrophoneEnabled ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-600 hover:bg-slate-500'} transition`}>
