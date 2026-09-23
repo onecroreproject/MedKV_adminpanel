@@ -108,7 +108,7 @@ export default function WebRTCHost() {
           <h1 className="text-3xl font-bold mb-6">Ready to join?</h1>
           <style>{`.lk-prejoin input[type="text"] { display: none !important; }`}</style>
           <PreJoin 
-             defaults={{ username: user.name, videoEnabled: false, audioEnabled: false }}
+             defaults={{ username: user.name, videoEnabled: true, audioEnabled: true }}
              onSubmit={handlePreJoinSubmit} 
           />
         </div>
@@ -138,6 +138,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const participants = useParticipants();
   const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare]);
+  const { send: sendChatMessage, chatMessages } = useChat();
 
   const [chatOpen, setChatOpen] = useState(true);
   const [messages, setMessages] = useState([]);
@@ -223,12 +224,6 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Ensure mic and camera are disabled immediately on room join
-  useEffect(() => {
-    if (!localParticipant) return;
-    localParticipant.setMicrophoneEnabled(false);
-    localParticipant.setCameraEnabled(false);
-  }, [localParticipant?.sid]);
 
   const toggleMute = () => {
     localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled);
@@ -447,7 +442,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   {chatMessages.map((m, i) => {
                     const isSystem = !m.from;
-                    const isMe = m.from?.identity === user.name;
+                    const isMe = m.from?.identity === user._id?.toString() || m.from?.identity === user.id?.toString() || m.from?.identity === user.name;
                     return (
                     <div key={m.id || i} className={`flex flex-col ${isSystem ? 'text-center text-accent text-xs' : 'text-left'}`}>
                       {!isSystem && <span className="text-xs text-slate-400 mb-1">{m.from?.name || m.from?.identity}</span>}
