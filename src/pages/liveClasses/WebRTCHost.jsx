@@ -11,7 +11,9 @@ import {
   useTracks,
   RoomAudioRenderer,
   useLocalParticipant,
-  useParticipants
+  useParticipants,
+  PreJoin,
+  useChat
 } from '@livekit/components-react';
 import { Track } from 'livekit-client';
 
@@ -75,58 +77,11 @@ export default function WebRTCHost() {
 
   const [hasJoined, setHasJoined] = useState(false);
   const [token, setToken] = useState('');
-  
-  // Lobby Media State (pre-join)
-  const [lobbyStream, setLobbyStream] = useState(null);
-  const [isMuted, setIsMuted] = useState(true);     // Default OFF
-  const [isVideoOff, setIsVideoOff] = useState(true); // Default OFF
-  const [mediaError, setMediaError] = useState('');
-  const myVideoRef = useRef();
+  const [preJoinChoices, setPreJoinChoices] = useState(null);
 
-  useEffect(() => {
-    const initMedia = async () => {
-      try {
-        const userStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 640, max: 640 }, height: { ideal: 480, max: 480 }, frameRate: { ideal: 15, max: 15 } },
-          audio: true
-        });
-        setLobbyStream(userStream);
-        if (myVideoRef.current) myVideoRef.current.srcObject = userStream;
-      } catch (err) {
-        setMediaError(`Media error: ${err.message || err.name}`);
-      }
-    };
-    initMedia();
-    return () => {
-      webrtcService.disconnect();
-      if (lobbyStream) lobbyStream.getTracks().forEach(t => t.stop());
-    };
-  }, []);
-
-  const toggleLobbyMute = () => {
-    if (lobbyStream) {
-      const audioTrack = lobbyStream.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsMuted(!audioTrack.enabled);
-      }
-    }
-  };
-
-  const toggleLobbyVideo = () => {
-    if (lobbyStream) {
-      const videoTrack = lobbyStream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsVideoOff(!videoTrack.enabled);
-      }
-    }
-  };
-
-  const handleJoin = async () => {
-    if (!lobbyStream && !mediaError) return;
+  const handlePreJoinSubmit = async (choices) => {
+    setPreJoinChoices(choices);
     try {
-      const backendUrl = import.meta.env.VITE_API_URL.replace('/api/v1', '');
       const response = await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/token/livekit`, {
         roomId,
         participantName: user.name,
@@ -138,12 +93,6 @@ export default function WebRTCHost() {
       setToken(response.data.token);
       setHasJoined(true);
       
-      // Stop lobby stream so LiveKit can take over hardware
-      if (lobbyStream) lobbyStream.getTracks().forEach(t => t.stop());
-
-      // Connect Socket.IO for chat/handraise
-      webrtcService.connect(roomId, user._id, user.role, user.name);
-
     } catch(err) {
       console.error('Failed to get token', err);
       alert('Failed to connect to media server.');
@@ -152,49 +101,15 @@ export default function WebRTCHost() {
 
   if (!hasJoined || !token) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-slate-900 text-white p-6">
+      <div className="flex flex-col items-center justify-center h-screen bg-slate-900 text-white p-6" data-lk-theme="default">
         <div className="bg-slate-800 p-8 rounded-2xl shadow-xl max-w-2xl w-full flex flex-col items-center">
+          <img src={darkLogo} alt="Logo" className="h-12 mb-6 object-contain" />
           <h1 className="text-3xl font-bold mb-6">Ready to join?</h1>
-          <div className="w-full max-w-md bg-black rounded-xl overflow-hidden aspect-video relative mb-6 border border-slate-700">
-            {lobbyStream ? (
-              <video 
-                ref={el => {
-                  myVideoRef.current = el;
-                  if (el && lobbyStream && el.srcObject !== lobbyStream) el.srcObject = lobbyStream;
-                }} 
-                autoPlay playsInline muted className="w-full h-full object-cover -scale-x-100" 
-              />
-            ) : mediaError ? (
-              <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center text-red-400 bg-red-950/30">
-                <VideoOff size={48} className="mb-4 opacity-50" />
-                <p>{mediaError}</p>
-              </div>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <span className="text-slate-400 animate-pulse">Requesting permissions...</span>
-              </div>
-            )}
-            
-            {lobbyStream && (
-               <div className="absolute bottom-4 flex w-full justify-center gap-4">
-                  <button onClick={toggleLobbyMute} className={`p-3 rounded-full ${isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-600 hover:bg-slate-500'} transition`}>
-                    {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
-                  </button>
-                  <button onClick={toggleLobbyVideo} className={`p-3 rounded-full ${isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-600 hover:bg-slate-500'} transition`}>
-                    {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
-                  </button>
-               </div>
-            )}
-          </div>
-          <button 
-            onClick={handleJoin}
-            disabled={!lobbyStream && !mediaError}
-            className={`px-8 py-3 rounded-full font-bold text-lg transition ${
-              !lobbyStream && !mediaError ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-hover text-white'
-            }`}
-          >
-            {mediaError ? 'Join Without Media' : 'Join Class'}
-          </button>
+          <PreJoin 
+             onSubmit={handlePreJoinSubmit} 
+             videoEnabled={false} 
+             audioEnabled={false}
+          />
         </div>
       </div>
     );
@@ -202,8 +117,8 @@ export default function WebRTCHost() {
 
   return (
     <LiveKitRoom
-      video={!isVideoOff}
-      audio={!isMuted}
+      video={preJoinChoices?.videoEnabled ?? false}
+      audio={preJoinChoices?.audioEnabled ?? false}
       token={token}
       serverUrl={import.meta.env.VITE_LIVEKIT_URL}
       connect={true}
@@ -250,16 +165,21 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
     }
   }, [chatOpen, activeTab]);
 
+  // We use useChat for messages now, so we only handle handraise and waiting room with webrtcService
   useEffect(() => {
-    webrtcService.onChat = (data) => {
-      setMessages(prev => [...prev, data]);
-      if (data.senderId !== user._id) {
+    // Unread count logic for new chat messages
+    if (chatMessages.length > 0) {
+      const lastMsg = chatMessages[chatMessages.length - 1];
+      if (lastMsg.from?.identity !== user.name) {
         playSound('message');
         if (activeTabRef.current !== 'chat' || !chatOpenRef.current) {
           setUnreadChatCount(prev => prev + 1);
         }
       }
-    };
+    }
+  }, [chatMessages.length]);
+
+  useEffect(() => {
 
     webrtcService.onHandRaise = (data) => {
       playSound('hand');
@@ -399,7 +319,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const sendChat = (e) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
-    webrtcService.sendChat(chatInput);
+    sendChatMessage(chatInput);
     setChatInput('');
   };
 
@@ -524,14 +444,17 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
             {activeTab === 'chat' ? (
               <>
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.map((m, i) => (
-                    <div key={i} className={`flex flex-col ${m.senderId === 'system' ? 'text-center text-accent text-xs' : 'text-left'}`}>
-                      {m.senderId !== 'system' && <span className="text-xs text-slate-400 mb-1">{m.name}</span>}
-                      <div className={`${m.senderId === 'system' ? 'bg-transparent' : (m.senderId === webrtcService.socket?.id ? 'bg-primary self-end' : 'bg-slate-700 self-start')} px-3 py-2 rounded-lg text-sm inline-block max-w-[85%]`}>
+                  {chatMessages.map((m, i) => {
+                    const isSystem = !m.from;
+                    const isMe = m.from?.identity === user.name;
+                    return (
+                    <div key={m.id || i} className={`flex flex-col ${isSystem ? 'text-center text-accent text-xs' : 'text-left'}`}>
+                      {!isSystem && <span className="text-xs text-slate-400 mb-1">{m.from?.name || m.from?.identity}</span>}
+                      <div className={`${isSystem ? 'bg-transparent' : (isMe ? 'bg-primary self-end' : 'bg-slate-700 self-start')} px-3 py-2 rounded-lg text-sm inline-block max-w-[85%]`}>
                         {m.message}
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
 
                 <form onSubmit={sendChat} className="p-4 border-t border-slate-700 flex gap-2">

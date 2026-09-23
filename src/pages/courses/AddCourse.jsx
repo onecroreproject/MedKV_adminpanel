@@ -76,6 +76,10 @@ export default function AddCourse() {
           setValue('banner', course.banner || '');
           setValue('isImportant', course.isImportant || false);
           
+          setValue('startDate', course.startDate || '');
+          setValue('startTime', course.startTime || '');
+          setValue('endTime', course.endTime || '');
+          
           setValue('learningOutcomes', course.learningOutcomes || []);
           setValue('liveSessions', course.liveSessions || []);
           setValue('pacsCases', course.pacsCases || []);
@@ -158,6 +162,9 @@ export default function AddCourse() {
         thumbnail: data.thumbnail || '',
         banner: data.banner || '',
         duration: data.duration || 'lifetime',
+        startDate: data.startDate || '',
+        startTime: data.startTime || '',
+        endTime: data.endTime || '',
         status: statusToSet,
         instructor: instructorId,
         learningOutcomes: data.learningOutcomes || [],
@@ -277,6 +284,22 @@ export default function AddCourse() {
                     <input type="checkbox" value="Hindi" {...register('languages')} className="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
                     <span className="text-sm text-text-main">Hindi</span>
                   </label>
+                </div>
+              </div>
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-text-main mb-1.5">Start Date</label>
+                  <div className="relative">
+                    <input type="date" {...register('startDate')} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-main mb-1.5">Start Time</label>
+                  <input type="time" {...register('startTime')} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-main mb-1.5">End Time</label>
+                  <input type="time" {...register('endTime')} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20" />
                 </div>
               </div>
               <div className="md:col-span-2 mt-2 p-4 bg-yellow-50 border border-yellow-200 rounded-xl flex items-start space-x-3">
