@@ -126,7 +126,7 @@ export default function WebRTCHost() {
       token={token}
       serverUrl={import.meta.env.VITE_LIVEKIT_URL}
       connect={true}
-      options={{ adaptiveStream: true, dynacast: true }}
+      options={{ adaptiveStream: true, dynacast: true, stopLocalTrackOnUnpublish: true }}
       className="flex flex-col h-screen bg-slate-900 text-white relative"
       data-lk-theme="default"
     >
