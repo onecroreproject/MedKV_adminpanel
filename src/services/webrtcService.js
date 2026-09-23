@@ -93,6 +93,18 @@ class WebRTCService {
     if (this.socket) this.socket.emit('force-mute', { targetId });
   }
 
+  cameraOffParticipant(targetId) {
+    if (this.socket) this.socket.emit('force-camera-off', { targetId });
+  }
+
+  muteAll() {
+    if (this.socket) this.socket.emit('mute-all');
+  }
+
+  cameraOffAll() {
+    if (this.socket) this.socket.emit('camera-off-all');
+  }
+
   updateMediaState(isMuted, isVideoOff) {
     if (this.socket) {
       this.socket.emit('media-state-changed', { isMuted, isVideoOff });

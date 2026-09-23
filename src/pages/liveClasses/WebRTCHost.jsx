@@ -325,6 +325,39 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
     }
   };
 
+  const handleForceCameraOff = async (identity) => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/camera-off-participant`, { roomId, identity }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      webrtcService.cameraOffParticipant(identity);
+    } catch (err) {
+      console.error("Failed to force camera off", err);
+    }
+  };
+
+  const handleMuteAll = async () => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/mute-all`, { roomId }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      webrtcService.muteAll();
+    } catch (err) {
+      console.error("Failed to mute all", err);
+    }
+  };
+
+  const handleCameraOffAll = async () => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/camera-off-all`, { roomId }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      webrtcService.cameraOffAll();
+    } catch (err) {
+      console.error("Failed to turn camera off all", err);
+    }
+  };
+
   const sendChat = (e) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
@@ -502,6 +535,13 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
                               <MicOff size={14} />
                             </button>
                           )}
+                          {!p.isCameraEnabled ? (
+                            <span className="p-1.5 text-red-400" title="Camera Off"><VideoOff size={14} /></span>
+                          ) : (
+                            <button onClick={() => handleForceCameraOff(p.identity)} className="p-1.5 bg-slate-600 hover:bg-red-500 rounded text-slate-300 transition" title="Force Camera Off">
+                              <VideoOff size={14} />
+                            </button>
+                          )}
                           <button onClick={() => handleKickParticipant(p.identity)} className="p-1.5 bg-slate-600 hover:bg-red-500 rounded text-slate-300 transition" title="Remove Participant">
                             <PhoneOff size={14} />
                           </button>
@@ -516,6 +556,20 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
                     </div>
                   )}
                 </div>
+
+                {/* Global Moderation Toolbar */}
+                <div className="p-3 border-t border-slate-700 bg-slate-800 flex flex-col gap-2">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Room Moderation</h3>
+                  <div className="flex gap-2">
+                    <button onClick={handleMuteAll} className="flex-1 py-1.5 bg-slate-700 hover:bg-red-600 text-white text-xs font-bold rounded transition flex items-center justify-center gap-1">
+                      <MicOff size={12} /> Mute All
+                    </button>
+                    <button onClick={handleCameraOffAll} className="flex-1 py-1.5 bg-slate-700 hover:bg-red-600 text-white text-xs font-bold rounded transition flex items-center justify-center gap-1">
+                      <VideoOff size={12} /> Cam Off All
+                    </button>
+                  </div>
+                </div>
+
               </div>
             )}
           </div>
