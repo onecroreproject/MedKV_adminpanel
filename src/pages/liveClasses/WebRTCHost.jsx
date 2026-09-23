@@ -383,55 +383,56 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
     setTimeout(() => navigate(-1), 300);
   };
 
-  const handleForceMute = async (identity) => {
+  const handleForceMute = (identity) => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/mute-participant`, { roomId, identity }, {
+      webrtcService.muteParticipant(identity); // Instant socket emit
+      axios.post(`${import.meta.env.VITE_API_URL}/live-classes/mute-participant`, { roomId, identity }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      webrtcService.muteParticipant(identity);
+      }).catch(err => console.error("API error muting participant", err));
     } catch (err) {
       console.error("Failed to mute participant", err);
     }
   };
 
-  const handleKickParticipant = async (identity) => {
+  const handleKickParticipant = (identity) => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/kick-participant`, { roomId, identity }, {
+      webrtcService.kickParticipant(identity); // Instant socket emit
+      axios.post(`${import.meta.env.VITE_API_URL}/live-classes/kick-participant`, { roomId, identity }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      }).catch(err => console.error("API error kicking participant", err));
     } catch (err) {
       console.error("Failed to kick participant", err);
     }
   };
 
-  const handleForceCameraOff = async (identity) => {
+  const handleForceCameraOff = (identity) => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/camera-off-participant`, { roomId, identity }, {
+      webrtcService.cameraOffParticipant(identity); // Instant socket emit
+      axios.post(`${import.meta.env.VITE_API_URL}/live-classes/camera-off-participant`, { roomId, identity }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      webrtcService.cameraOffParticipant(identity);
+      }).catch(err => console.error("API error forcing camera off", err));
     } catch (err) {
       console.error("Failed to force camera off", err);
     }
   };
 
-  const handleForceUnmute = async (identity) => {
+  const handleForceUnmute = (identity) => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/unmute-participant`, { roomId, identity }, {
+      webrtcService.unmuteParticipant(identity); // Instant socket emit
+      axios.post(`${import.meta.env.VITE_API_URL}/live-classes/unmute-participant`, { roomId, identity }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      webrtcService.unmuteParticipant(identity);
+      }).catch(err => console.error("API error unmuting participant", err));
     } catch (err) {
       console.error("Failed to unmute participant", err);
     }
   };
 
-  const handleForceCameraOn = async (identity) => {
+  const handleForceCameraOn = (identity) => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/camera-on-participant`, { roomId, identity }, {
+      webrtcService.cameraOnParticipant(identity); // Instant socket emit
+      axios.post(`${import.meta.env.VITE_API_URL}/live-classes/camera-on-participant`, { roomId, identity }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      webrtcService.cameraOnParticipant(identity);
+      }).catch(err => console.error("API error forcing camera on", err));
     } catch (err) {
       console.error("Failed to turn camera on", err);
     }
