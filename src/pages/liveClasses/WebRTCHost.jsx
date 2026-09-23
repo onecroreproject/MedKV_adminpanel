@@ -13,7 +13,9 @@ import {
   useLocalParticipant,
   useParticipants,
   PreJoin,
-  useChat
+  useChat,
+  GridLayout,
+  ParticipantTile
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track } from 'livekit-client';
@@ -138,7 +140,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const participants = useParticipants();
-  const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare]);
+  const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare], { onlySubscribed: false });
   const { send: sendChatMessage, chatMessages } = useChat();
 
   const [chatOpen, setChatOpen] = useState(true);
@@ -371,51 +373,18 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
         {/* Video Area */}
         <div className="flex-1 flex flex-col p-4 relative">
           
-          {/* Main Video View (Teacher) */}
-          <div ref={mainVideoWrapperRef} className="flex-1 bg-black rounded-xl overflow-hidden relative border border-slate-700 flex items-center justify-center">
-             {localParticipant.isScreenShareEnabled && (
-               <div className="text-green-500 flex flex-col items-center animate-pulse z-10 bg-black/80 w-full h-full justify-center absolute inset-0">
-                  <MonitorUp size={64} className="mb-4" />
-                  <p className="font-bold text-lg">You are sharing your screen</p>
-               </div>
-             )}
-             
-             {mainTrack && (
-                <VideoTrack 
-                  trackRef={mainTrack} 
-                  className={`w-full h-full object-contain ${mainTrack.source === Track.Source.Camera ? '-scale-x-100' : ''} ${localParticipant.isScreenShareEnabled ? 'opacity-0' : 'opacity-100'}`} 
-                />
-             )}
-             {!mainTrack && (
-                <div className="flex flex-col items-center text-slate-500">
-                  <VideoOff size={48} className="mb-4" />
-                  <p>Camera is off</p>
-                </div>
-             )}
-
-             <div className="absolute bottom-4 left-4 bg-black/60 px-3 py-1 rounded-md text-sm">
-               You (Broadcasting)
-             </div>
-             <button 
-               onClick={toggleFullscreen} 
-               className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black/80 rounded-md transition text-slate-300 hover:text-white"
-             >
-               {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
-             </button>
-          </div>
-
-          {/* Picture in Picture / Grid of other students */}
-          <div className="flex gap-2 mt-4 overflow-x-auto pb-2 h-36">
-             {tracks.filter(t => !t.participant.isLocal && t.source === Track.Source.Camera).map((track) => (
-                <div key={track.participant.identity} className="w-48 flex flex-col bg-slate-800 rounded-lg overflow-hidden border border-slate-600 shadow-lg">
-                  <div className="flex-1 bg-black relative">
-                    <VideoTrack trackRef={track} className="w-full h-full absolute inset-0 object-cover" />
-                  </div>
-                  <div className="px-2 py-1.5 text-center text-xs text-slate-300 font-medium truncate bg-slate-800 border-t border-slate-700">
-                    {track.participant.name || track.participant.identity}
-                  </div>
-                </div>
-             ))}
+          {/* Google Meet Style Grid Layout */}
+          <div ref={mainVideoWrapperRef} className="flex-1 rounded-xl overflow-hidden relative border border-slate-700 bg-black">
+            <GridLayout tracks={tracks} style={{ height: '100%', width: '100%' }}>
+              <ParticipantTile />
+            </GridLayout>
+            
+            <button 
+              onClick={toggleFullscreen} 
+              className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black/80 rounded-md transition text-slate-300 hover:text-white z-50"
+            >
+              {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+            </button>
           </div>
         </div>
 
