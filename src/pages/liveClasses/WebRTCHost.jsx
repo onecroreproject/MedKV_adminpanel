@@ -16,7 +16,7 @@ import {
   useChat,
   GridLayout,
   ParticipantTile,
-  useParticipant
+  useIsSpeaking
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track } from 'livekit-client';
@@ -70,7 +70,7 @@ const playSound = (type) => {
 
 const VoiceIndicator = ({ participant }) => {
   if (!participant) return null;
-  const { isSpeaking } = useParticipant(participant);
+  const isSpeaking = useIsSpeaking(participant);
   if (!isSpeaking) return null;
   return (
     <>
