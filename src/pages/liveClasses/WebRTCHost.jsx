@@ -141,7 +141,16 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const participants = useParticipants();
-  const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare], { onlySubscribed: false });
+  const allTracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare], { onlySubscribed: false });
+  // Only show the teacher's tracks in the main grid to prevent students from taking over the screen
+  const tracks = allTracks.filter(t => {
+    try {
+      const meta = JSON.parse(t.participant.metadata || '{}');
+      return meta.isTeacher === true || t.participant.isLocal;
+    } catch (e) {
+      return t.participant.isLocal; // Fallback to local if metadata parsing fails
+    }
+  });
   const { send: sendChatMessage, chatMessages } = useChat();
 
   const [chatOpen, setChatOpen] = useState(true);
@@ -411,9 +420,15 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
           
           {/* Google Meet Style Grid Layout */}
           <div ref={mainVideoWrapperRef} className="flex-1 rounded-xl overflow-hidden relative border border-slate-700 bg-black">
-            <GridLayout tracks={tracks} style={{ height: '100%', width: '100%' }}>
-              <ParticipantTile />
-            </GridLayout>
+            {tracks.length > 0 ? (
+              <GridLayout tracks={tracks} style={{ height: '100%', width: '100%' }}>
+                <ParticipantTile />
+              </GridLayout>
+            ) : (
+              <div className="w-full h-full">
+                <ParticipantTile participant={localParticipant} style={{ height: '100%', width: '100%' }} />
+              </div>
+            )}
             
             <button 
               onClick={toggleFullscreen} 
