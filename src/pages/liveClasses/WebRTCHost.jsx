@@ -15,7 +15,8 @@ import {
   PreJoin,
   useChat,
   GridLayout,
-  ParticipantTile
+  ParticipantTile,
+  useParticipant
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track } from 'livekit-client';
@@ -65,6 +66,31 @@ const playSound = (type) => {
     osc.start();
     osc.stop(ctx.currentTime + 0.3);
   }
+};
+
+const VoiceIndicator = ({ participant }) => {
+  if (!participant) return null;
+  const { isSpeaking } = useParticipant(participant);
+  if (!isSpeaking) return null;
+  return (
+    <>
+      <style>{`
+        @keyframes danceBar {
+          0% { transform: scaleY(0.3); opacity: 0.8; }
+          100% { transform: scaleY(1.2); opacity: 1; }
+        }
+        .dancing-bar {
+          animation: danceBar 0.4s ease-in-out infinite alternate;
+          transform-origin: bottom;
+        }
+      `}</style>
+      <div className="absolute top-2 right-2 flex gap-1 items-end bg-black/60 px-2 py-1.5 rounded-md z-20 shadow border border-white/10 h-8">
+        <div className="w-1.5 h-3.5 bg-green-400 rounded-full dancing-bar" style={{ animationDelay: '0ms' }} />
+        <div className="w-1.5 h-5 bg-green-400 rounded-full dancing-bar" style={{ animationDelay: '150ms' }} />
+        <div className="w-1.5 h-4 bg-green-400 rounded-full dancing-bar" style={{ animationDelay: '300ms' }} />
+      </div>
+    </>
+  );
 };
 
 export default function WebRTCHost() {
@@ -311,6 +337,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
       await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/mute-participant`, { roomId, identity }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
+      webrtcService.muteParticipant(identity);
     } catch (err) {
       console.error("Failed to mute participant", err);
     }
@@ -414,7 +441,8 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
           <div ref={mainVideoWrapperRef} className="flex-1 flex flex-col gap-2 rounded-xl overflow-hidden relative border border-slate-700 bg-black p-1">
             
             {/* Main Screen: Admin (Host) ALWAYS */}
-            <div className="flex-1 w-full relative rounded-lg overflow-hidden border border-slate-800">
+            <div className="flex-1 w-full relative rounded-lg overflow-hidden border border-slate-800 group">
+              {localParticipant && <VoiceIndicator participant={localParticipant} />}
               {isCameraEnabled ? (
                 <GridLayout tracks={tracks.filter(t => t.participant.isLocal)} style={{ height: '100%', width: '100%' }}>
                   <ParticipantTile />
@@ -433,22 +461,35 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
             </div>
 
             {/* Horizontal Scroll Row for Students */}
-            {tracks.filter(t => !t.participant.isLocal).length > 0 && (
-              <div className="h-28 md:h-36 w-full shrink-0 flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-slate-600 px-1">
-                {tracks.filter(t => !t.participant.isLocal).map(t => (
-                  <div key={t.publication.trackSid} className="h-full aspect-video shrink-0 rounded-lg overflow-hidden border border-slate-700 relative bg-slate-900">
-                    <ParticipantTile trackRef={t} />
+            {participants.filter(p => !p.isLocal).length > 0 && (
+              <div className="h-28 md:h-36 w-full shrink-0 flex flex-nowrap gap-2 overflow-x-auto overflow-y-hidden pb-2 scroll-smooth scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800 px-1">
+                {participants.filter(p => !p.isLocal).map(p => (
+                  <div key={p.identity} className="h-full aspect-video min-w-[160px] md:min-w-[200px] shrink-0 rounded-lg overflow-hidden border border-slate-700 relative bg-slate-900 flex flex-col items-center justify-center group">
+                    <VoiceIndicator participant={p} />
+                    {p.isCameraEnabled ? (
+                      <ParticipantTile participant={p} style={{ height: '100%', width: '100%' }} />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full w-full bg-slate-800">
+                        <div className="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center text-xl font-bold text-slate-300 shadow-md border-2 border-slate-700">
+                          {p.name ? p.name.substring(0, 2).toUpperCase() : 'ST'}
+                        </div>
+                      </div>
+                    )}
+                    {/* Persistent Label when Camera is Off, or Overlay when Camera is On */}
+                    {!p.isCameraEnabled && (
+                      <div className="absolute bottom-2 left-2 right-2 bg-black/70 px-2 py-1 rounded text-white text-[10px] sm:text-xs flex items-center justify-between z-10">
+                        <span className="truncate flex-1 mr-1 font-medium">{p.name || p.identity}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {p.isMicrophoneEnabled ? <Mic size={12} className="text-green-400" /> : <MicOff size={12} className="text-red-400" />}
+                          <VideoOff size={12} className="text-red-400" />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             )}
             
-            <button 
-              onClick={toggleFullscreen} 
-              className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black/80 rounded-md transition text-slate-300 hover:text-white z-50"
-            >
-              {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
-            </button>
           </div>
         </div>
 
@@ -623,13 +664,8 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
         </div>
 
         <div className="flex gap-2 justify-end md:w-1/4">
-          <button onClick={() => setChatOpen(!chatOpen)} className={`p-3 rounded-full ${chatOpen ? 'bg-primary text-white' : 'bg-slate-600 hover:bg-slate-500'} transition relative`} title="Chat">
-            <MessageSquare size={20} />
-            {unreadChatCount > 0 && !chatOpen && (
-               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-bounce">
-                  {unreadChatCount}
-               </span>
-            )}
+          <button onClick={toggleFullscreen} className={`p-3 rounded-full ${isFullscreen ? 'bg-primary text-white' : 'bg-slate-600 hover:bg-slate-500'} transition relative`} title={isFullscreen ? 'Minimize' : 'Maximize'}>
+            {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
           </button>
         </div>
       </footer>
