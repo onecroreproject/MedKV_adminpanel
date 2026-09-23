@@ -96,7 +96,8 @@ export default function WebRTCHost() {
       
     } catch(err) {
       console.error('Failed to get token', err);
-      alert('Failed to connect to media server.');
+      const backendMessage = err.response?.data?.message || err.message;
+      alert(`Connection failed: ${backendMessage}`);
     }
   };
 
