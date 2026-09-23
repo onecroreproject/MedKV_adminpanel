@@ -128,6 +128,7 @@ export default function WebRTCHost() {
       connect={true}
       options={{ adaptiveStream: true, dynacast: true }}
       className="flex flex-col h-screen bg-slate-900 text-white relative"
+      data-lk-theme="default"
     >
       <ActiveHostClassroom user={user} roomId={roomId} isTeacher={isTeacher} courseName={courseName} />
       <RoomAudioRenderer />
