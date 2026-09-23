@@ -425,8 +425,14 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
                 <ParticipantTile />
               </GridLayout>
             ) : (
-              <div className="w-full h-full">
-                <ParticipantTile participant={localParticipant} style={{ height: '100%', width: '100%' }} />
+              <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 gap-4 relative">
+                <div className="w-32 h-32 bg-slate-700 rounded-full flex items-center justify-center text-4xl font-bold text-slate-300 shadow-xl border-4 border-slate-800">
+                  {user.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                </div>
+                <div className="absolute bottom-4 left-4 bg-black/60 px-3 py-1 rounded text-white text-sm flex items-center gap-2">
+                  <MicOff size={14} className="text-red-400" />
+                  {user.name || 'Admin'}
+                </div>
               </div>
             )}
             
