@@ -425,8 +425,9 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
           </div>
         </div>
         <div className="flex gap-2 md:gap-4 items-center shrink-0">
-          <span className="text-xs md:text-sm bg-slate-700 px-2 md:px-3 py-1 rounded-full flex items-center gap-1">
-            <span className="font-bold">{participants.length}</span> <span className="hidden sm:inline">Participants</span>
+          <span className="bg-red-950/40 text-red-500 text-[11px] sm:text-xs px-3 py-1.5 rounded-full border border-red-500/30 flex items-center gap-2 font-bold tracking-wider shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_5px_rgba(239,68,68,0.8)]"></span>
+            LIVE {participants.length}
           </span>
         </div>
       </header>
@@ -463,11 +464,13 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
             {/* Horizontal Scroll Row for Students */}
             {participants.filter(p => !p.isLocal).length > 0 && (
               <div className="h-28 md:h-36 w-full shrink-0 flex flex-nowrap gap-2 overflow-x-auto overflow-y-hidden pb-2 scroll-smooth scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800 px-1">
-                {participants.filter(p => !p.isLocal).map(p => (
+                {participants.filter(p => !p.isLocal).map(p => {
+                  const cameraTrack = tracks.find(t => t.participant.identity === p.identity && t.source === Track.Source.Camera);
+                  return (
                   <div key={p.identity} className="h-full aspect-video min-w-[160px] md:min-w-[200px] shrink-0 rounded-lg overflow-hidden border border-slate-700 relative bg-slate-900 flex flex-col items-center justify-center group">
                     <VoiceIndicator participant={p} />
-                    {p.isCameraEnabled ? (
-                      <ParticipantTile trackRef={{ participant: p, source: Track.Source.Camera }} style={{ height: '100%', width: '100%' }} />
+                    {cameraTrack ? (
+                      <ParticipantTile trackRef={cameraTrack} style={{ height: '100%', width: '100%' }} />
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full w-full bg-slate-800">
                         <div className="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center text-xl font-bold text-slate-300 shadow-md border-2 border-slate-700">
@@ -476,7 +479,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
                       </div>
                     )}
                     {/* Persistent Label when Camera is Off, or Overlay when Camera is On */}
-                    {!p.isCameraEnabled && (
+                    {!cameraTrack && (
                       <div className="absolute bottom-2 left-2 right-2 bg-black/70 px-2 py-1 rounded text-white text-[10px] sm:text-xs flex items-center justify-between z-10">
                         <span className="truncate flex-1 mr-1 font-medium">{p.name || p.identity}</span>
                         <div className="flex items-center gap-1 shrink-0">
@@ -486,7 +489,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
                       </div>
                     )}
                   </div>
-                ))}
+                )})}
               </div>
             )}
             
