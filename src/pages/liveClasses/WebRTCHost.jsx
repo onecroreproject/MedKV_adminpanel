@@ -204,36 +204,6 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
 
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled, cameraTrack, screenShareTrack } = useLocalParticipant();
 
-  const recoverCamera = async () => {
-    if (cameraRecovering) return;
-
-    try {
-      setCameraRecovering(true);
-      setCameraError(false);
-
-      console.log('Starting camera recovery...');
-
-      // First release the current LiveKit camera track
-      if (localParticipant.isCameraEnabled) {
-        await localParticipant.setCameraEnabled(false);
-      }
-
-      // Give the browser/OS time to release the camera hardware
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Request the camera again
-      await localParticipant.setCameraEnabled(true);
-
-      console.log('Camera recovery successful');
-      setCameraError(false);
-
-    } catch (error) {
-      console.error('Camera recovery failed:', error);
-      setCameraError(true);
-    } finally {
-      setCameraRecovering(false);
-    }
-  };
 
   const participants = useParticipants();
   // Fetch ALL tracks so the host can see students who turn on their camera
@@ -401,6 +371,47 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
       });
   
       setCameraError(true);
+    }
+  };
+
+  const recoverCamera = async () => {
+    if (cameraRecovering) return;
+  
+    try {
+      setCameraRecovering(true);
+      setCameraError(false);
+  
+      console.log("Starting camera recovery...");
+  
+      // Completely disable the current LiveKit camera track
+      try {
+        await localParticipant.setCameraEnabled(false);
+      } catch (err) {
+        console.warn("Failed to disable existing camera:", err);
+      }
+  
+      // Give the browser/device time to release the camera
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+  
+      // Let LiveKit create a fresh camera track
+      await localParticipant.setCameraEnabled(true);
+  
+      logEvent('CAMERA_RECOVERED', {
+        success: true,
+      });
+  
+      console.log("Camera recovered successfully.");
+    } catch (err) {
+      console.error("Camera recovery failed:", err);
+  
+      logEvent('CAMERA_RECOVERY_FAILED', {
+        error: err.message,
+        name: err.name,
+      });
+  
+      setCameraError(true);
+    } finally {
+      setCameraRecovering(false);
     }
   };
 
