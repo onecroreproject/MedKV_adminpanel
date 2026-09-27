@@ -219,6 +219,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
+  const [showRecordingInstructions, setShowRecordingInstructions] = useState(false);
   const mediaRecorderRef = useRef(null);
   const recordedChunks = useRef([]);
   
@@ -341,52 +342,100 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
     }
   };
 
-  const toggleRecording = async () => {
-    if (!isRecording) {
-      try {
-        // Check local storage space before starting
-        if (navigator.storage && navigator.storage.estimate) {
-          const estimate = await navigator.storage.estimate();
-          const availableMB = (estimate.quota - estimate.usage) / (1024 * 1024);
-          
-          if (availableMB < 1024) { // Less than 1 GB
-            const proceed = window.confirm(`WARNING: Your browser indicates you have low storage space (${Math.round(availableMB)} MB available). Long recordings might fail to save. Do you still want to proceed?`);
-            if (!proceed) return;
-          }
-        }
-
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-        recordedChunks.current = [];
-        mediaRecorderRef.current = new MediaRecorder(screenStream, { mimeType: 'video/webm' });
-        
-        mediaRecorderRef.current.ondataavailable = (e) => {
-          if (e.data.size > 0) recordedChunks.current.push(e.data);
-        };
-
-        mediaRecorderRef.current.onstop = () => {
-          const blob = new Blob(recordedChunks.current, { type: 'video/webm' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          
-          // Format filename: CourseName_Recording-1.webm
-          const safeCourseName = courseName.replace(/[^a-zA-Z0-9]/g, '_');
-          const timestamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-          a.download = `${safeCourseName}_Recording_${timestamp}.webm`;
-          
-          a.click();
-          window.URL.revokeObjectURL(url);
-          screenStream.getTracks().forEach(t => t.stop());
-        };
-
-        mediaRecorderRef.current.start();
-        setIsRecording(true);
-      } catch (err) {
-        console.error("Recording failed", err);
-      }
-    } else {
+  const toggleRecording = () => {
+    if (isRecording) {
       if (mediaRecorderRef.current) mediaRecorderRef.current.stop();
       setIsRecording(false);
+    } else {
+      setShowRecordingInstructions(true);
+    }
+  };
+
+  const startActualRecording = async () => {
+    try {
+      // Check local storage space before starting
+      if (navigator.storage && navigator.storage.estimate) {
+        const estimate = await navigator.storage.estimate();
+        const availableMB = (estimate.quota - estimate.usage) / (1024 * 1024);
+        
+        if (availableMB < 1024) { // Less than 1 GB
+          const proceed = window.confirm(`WARNING: Your browser indicates you have low storage space (${Math.round(availableMB)} MB available). Long recordings might fail to save. Do you still want to proceed?`);
+          if (!proceed) return;
+        }
+      }
+
+      // 1. Get the screen stream (Video + Students Audio via "Share tab audio")
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: "browser" },
+        audio: true
+      });
+
+      // 2. Get the microphone stream (Teacher's Audio)
+      let micStream;
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (e) {
+        console.warn("Could not capture microphone for recording mix", e);
+      }
+
+      // 3. Mix audio streams
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const audioContext = new AudioContextClass();
+      const dest = audioContext.createMediaStreamDestination();
+      
+      let hasAudio = false;
+      if (screenStream.getAudioTracks().length > 0) {
+        const screenSource = audioContext.createMediaStreamSource(screenStream);
+        screenSource.connect(dest);
+        hasAudio = true;
+      }
+      if (micStream && micStream.getAudioTracks().length > 0) {
+        const micSource = audioContext.createMediaStreamSource(micStream);
+        micSource.connect(dest);
+        hasAudio = true;
+      }
+
+      // 4. Combine Video + Mixed Audio
+      const tracks = [screenStream.getVideoTracks()[0]];
+      if (hasAudio && dest.stream.getAudioTracks().length > 0) {
+        tracks.push(dest.stream.getAudioTracks()[0]);
+      }
+      const combinedStream = new MediaStream(tracks);
+
+      recordedChunks.current = [];
+      mediaRecorderRef.current = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
+      
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.current.push(e.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(recordedChunks.current, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        const safeCourseName = courseName.replace(/[^a-zA-Z0-9]/g, '_');
+        const timestamp = new Date().toISOString().slice(0, 10);
+        a.download = `${safeCourseName}_Recording_${timestamp}.webm`;
+        
+        a.click();
+        window.URL.revokeObjectURL(url);
+        
+        // Cleanup all tracks and contexts
+        screenStream.getTracks().forEach(t => t.stop());
+        if (micStream) micStream.getTracks().forEach(t => t.stop());
+        combinedStream.getTracks().forEach(t => t.stop());
+        if (audioContext.state !== 'closed') audioContext.close();
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Recording failed", err);
+      if (err.name !== 'NotAllowedError') {
+        alert("Failed to start recording. Check permissions.");
+      }
     }
   };
 
@@ -749,6 +798,33 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
           </button>
         </div>
       </footer>
+      
+      {/* Recording Instructions Modal */}
+      {showRecordingInstructions && (
+         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+           <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl max-w-lg w-full shadow-2xl">
+             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-3">
+               <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
+               How to Record Properly
+             </h2>
+             <p className="text-slate-300 text-sm mb-4 leading-relaxed">Because we are recording locally to your computer, Chrome strictly requires you to manually select the screen.</p>
+             <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-6">
+               <ol className="list-decimal pl-5 space-y-3 text-sm text-slate-300">
+                 <li>Click the <strong className="text-white bg-slate-700 px-1.5 py-0.5 rounded border border-slate-600">Chrome Tab</strong> option at the very top of the popup.</li>
+                 <li>Select <strong className="text-brand-accent">this exact tab</strong> from the list.</li>
+                 <li><strong className="text-red-400">CRITICAL:</strong> Check the box at the bottom that says <strong className="text-white">"Share tab audio"</strong> (If you forget this, the students' voices will be totally silent in the recording!).</li>
+                 <li>Click the blue <strong className="text-white">Share</strong> button.</li>
+               </ol>
+             </div>
+             <div className="flex gap-3 justify-end">
+               <button onClick={() => setShowRecordingInstructions(false)} className="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors font-medium text-sm">Cancel</button>
+               <button onClick={() => { setShowRecordingInstructions(false); startActualRecording(); }} className="px-5 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 font-bold transition-colors shadow-[0_4px_14px_rgba(239,68,68,0.3)] text-sm">
+                 I Understand, Start Recording
+               </button>
+             </div>
+           </div>
+         </div>
+      )}
     </>
   );
 }
