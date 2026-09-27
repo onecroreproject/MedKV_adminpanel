@@ -201,7 +201,7 @@ export default function WebRTCHost() {
 function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const navigate = useNavigate();
   
-  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled, cameraTrack, screenShareTrack } = useLocalParticipant();
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const participants = useParticipants();
   // Fetch ALL tracks so the host can see students who turn on their camera
   const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare], { onlySubscribed: false });
@@ -513,16 +513,16 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
                 const isScreenShareOn = isScreenShareEnabled;
                 const isCameraOn = isCameraEnabled;
 
-                const activeTrackRef = (isScreenShareOn && screenShareTrack)
-                  ? { participant: localParticipant, source: Track.Source.ScreenShare, publication: screenShareTrack, track: screenShareTrack.track }
-                  : (isCameraOn && cameraTrack)
-                  ? { participant: localParticipant, source: Track.Source.Camera, publication: cameraTrack, track: cameraTrack.track }
-                  : null;
-
-                if (activeTrackRef && activeTrackRef.track) {
+                if (isScreenShareOn) {
                   return (
                     <div className="w-full h-full">
-                      <ParticipantTile trackRef={activeTrackRef} style={{ height: '100%', width: '100%' }} />
+                      <ParticipantTile participant={localParticipant} source={Track.Source.ScreenShare} style={{ height: '100%', width: '100%' }} />
+                    </div>
+                  );
+                } else if (isCameraOn) {
+                  return (
+                    <div className="w-full h-full">
+                      <ParticipantTile participant={localParticipant} source={Track.Source.Camera} style={{ height: '100%', width: '100%' }} />
                     </div>
                   );
                 }
