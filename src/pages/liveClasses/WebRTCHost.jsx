@@ -337,8 +337,10 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
     try {
       await localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
     } catch (err) {
-      console.error(err);
-      alert("Failed to share screen. Please check browser permissions.");
+      console.error("Screen share error:", err);
+      if (err?.name !== 'NotAllowedError' && !err?.message?.includes('Permission denied')) {
+        alert("Failed to share screen. Please check browser permissions.");
+      }
     }
   };
 
