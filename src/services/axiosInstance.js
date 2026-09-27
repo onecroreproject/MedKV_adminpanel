@@ -21,4 +21,21 @@ axiosInstance.interceptors.request.use(
   }
 );
 
+// Add a response interceptor to handle Session Revoked logic globally
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      if (error.response.data && error.response.data.message === 'SESSION_REVOKED') {
+        if (!window.location.pathname.includes('/login')) {
+          localStorage.removeItem('token');
+          alert('You have been logged out because your account was accessed from another device.');
+          window.location.href = '/login';
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default axiosInstance;

@@ -201,7 +201,7 @@ export default function WebRTCHost() {
 function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const navigate = useNavigate();
   
-  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled, cameraTrack, screenShareTrack } = useLocalParticipant();
   const participants = useParticipants();
   // Fetch ALL tracks so the host can see students who turn on their camera
   const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare], { onlySubscribed: false });
@@ -316,16 +316,29 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   }, []);
 
 
-  const toggleMute = () => {
-    localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled);
+  const toggleMute = async () => {
+    try {
+      await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+    } catch (err) {
+      alert("Failed to access microphone. Please check permissions.");
+    }
   };
 
-  const toggleVideo = () => {
-    localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled);
+  const toggleVideo = async () => {
+    try {
+      await localParticipant.setCameraEnabled(!isCameraEnabled);
+    } catch (err) {
+      alert("Failed to access camera. It might be blocked or missing.");
+    }
   };
 
-  const toggleScreenShare = () => {
-    localParticipant.setScreenShareEnabled(!localParticipant.isScreenShareEnabled);
+  const toggleScreenShare = async () => {
+    try {
+      await localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to share screen. Please check browser permissions.");
+    }
   };
 
   const toggleRecording = async () => {
@@ -497,18 +510,19 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
             <div className="flex-1 w-full relative rounded-lg overflow-hidden border border-slate-800 group">
               {localParticipant && <VoiceIndicator participant={localParticipant} />}
               {(() => {
-                const isScreenShareOn = localParticipant?.isScreenShareEnabled;
-                const isCameraOn = localParticipant?.isCameraEnabled;
+                const isScreenShareOn = isScreenShareEnabled;
+                const isCameraOn = isCameraEnabled;
 
-                const localTracks = tracks.filter(t => t.participant.isLocal);
-                const screenShareTrack = isScreenShareOn ? localTracks.find(t => t.source === Track.Source.ScreenShare) : null;
-                const cameraTrack = isCameraOn ? localTracks.find(t => t.source === Track.Source.Camera) : null;
-                const activeTrack = screenShareTrack || cameraTrack;
+                const activeTrackRef = (isScreenShareOn && screenShareTrack)
+                  ? { participant: localParticipant, source: Track.Source.ScreenShare, publication: screenShareTrack, track: screenShareTrack.track }
+                  : (isCameraOn && cameraTrack)
+                  ? { participant: localParticipant, source: Track.Source.Camera, publication: cameraTrack, track: cameraTrack.track }
+                  : null;
 
-                if (activeTrack) {
+                if (activeTrackRef && activeTrackRef.track) {
                   return (
                     <div className="w-full h-full">
-                      <ParticipantTile trackRef={activeTrack} style={{ height: '100%', width: '100%' }} />
+                      <ParticipantTile trackRef={activeTrackRef} style={{ height: '100%', width: '100%' }} />
                     </div>
                   );
                 }
@@ -519,7 +533,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
                       {user.name ? user.name.charAt(0).toUpperCase() : 'A'}
                     </div>
                     <div className="absolute bottom-4 left-4 bg-black/60 px-3 py-1 rounded text-white text-sm flex items-center gap-2">
-                      {!localParticipant.isMicrophoneEnabled ? <MicOff size={14} className="text-red-400" /> : <Mic size={14} className="text-green-400" />}
+                      {!isMicrophoneEnabled ? <MicOff size={14} className="text-red-400" /> : <Mic size={14} className="text-green-400" />}
                       {user.name || 'Admin'}
                     </div>
                   </div>
@@ -711,15 +725,15 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
       <footer className="bg-slate-800 pt-3 pb-10 md:p-4 md:pb-4 flex flex-wrap justify-center md:justify-between items-center gap-2 md:gap-4 shrink-0">
         <div className="hidden md:flex gap-2 w-1/4"></div>
         <div className="flex gap-2 md:gap-4 justify-center items-center flex-wrap">
-          <button onClick={toggleMute} className={`p-3 rounded-full ${!localParticipant.isMicrophoneEnabled ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-600 hover:bg-slate-500'} transition`}>
-            {!localParticipant.isMicrophoneEnabled ? <MicOff size={20} /> : <Mic size={20} />}
+          <button onClick={toggleMute} className={`p-3 rounded-full ${!isMicrophoneEnabled ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-600 hover:bg-slate-500'} transition`}>
+            {!isMicrophoneEnabled ? <MicOff size={20} /> : <Mic size={20} />}
           </button>
           
-          <button onClick={toggleVideo} className={`p-3 rounded-full ${!localParticipant.isCameraEnabled ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-600 hover:bg-slate-500'} transition`}>
-            {!localParticipant.isCameraEnabled ? <VideoOff size={20} /> : <Video size={20} />}
+          <button onClick={toggleVideo} className={`p-3 rounded-full ${!isCameraEnabled ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-600 hover:bg-slate-500'} transition`}>
+            {!isCameraEnabled ? <VideoOff size={20} /> : <Video size={20} />}
           </button>
 
-          <button onClick={toggleScreenShare} className={`p-3 rounded-full ${localParticipant.isScreenShareEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-slate-600 hover:bg-slate-500'} transition`} title="Share Screen">
+          <button onClick={toggleScreenShare} className={`p-3 rounded-full ${isScreenShareEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-slate-600 hover:bg-slate-500'} transition`} title="Share Screen">
             <MonitorUp size={20} />
           </button>
 
