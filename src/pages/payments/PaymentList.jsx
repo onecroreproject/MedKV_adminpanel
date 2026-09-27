@@ -191,11 +191,12 @@ export default function PaymentList() {
       const res = await axiosInstance.get(`/payment/${paymentId}/receipt`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       
+      const studentName = payment.student?.name ? payment.student.name.replace(/[^a-zA-Z0-9]/g, '_') : 'Student';
       const courseTitle = payment.course?.title ? payment.course.title.replace(/[^a-zA-Z0-9]/g, '_') : 'Course';
       const invoiceNumber = `INV-${paymentId.slice(-6).toUpperCase()}`;
       
       const a   = document.createElement('a');
-      a.href = url; a.setAttribute('download', `${courseTitle}_${invoiceNumber}.pdf`);
+      a.href = url; a.setAttribute('download', `${studentName}_${courseTitle}_${invoiceNumber}.pdf`);
       document.body.appendChild(a); a.click(); a.remove();
     } catch { alert('Failed to download receipt'); }
   };
