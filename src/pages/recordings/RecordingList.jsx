@@ -226,10 +226,15 @@ export default function RecordingList() {
                           <button 
                             onClick={() => navigate(`/recordings/${rec._id}`)}
                             className="font-semibold text-text-main hover:text-brand-primary transition-colors text-left max-w-[200px] truncate block"
-                            title={rec.title}
+                            title={rec.title || rec.liveClass?.title || 'Untitled Recording'}
                           >
-                            {rec.title}
+                            {rec.title || rec.liveClass?.title || 'Untitled Recording'}
                           </button>
+                          {rec.liveClass && (
+                            <span className="text-[10px] font-bold text-brand-primary bg-brand-primary/10 px-1.5 py-0.5 rounded mt-1 inline-block">
+                              Live Class: {rec.liveClass.title}
+                            </span>
+                          )}
                           <p className="text-xs text-text-muted mt-0.5">Uploaded {new Date(rec.createdAt).toLocaleDateString()}</p>
                         </div>
                       </div>
@@ -243,8 +248,8 @@ export default function RecordingList() {
                         {(rec.courseModule || rec.lesson || rec.liveClass?.courseModule || rec.liveClass?.lesson) && (
                           <div className="flex flex-col gap-1 mt-1">
                             {(rec.courseModule || rec.liveClass?.courseModule) && (
-                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-brand-primary/10 text-brand-primary w-fit">
-                                M: {(rec.courseModule?.title || rec.liveClass?.courseModule?.title)}
+                              <span className="text-[10px] font-bold px-2 py-1 rounded bg-purple-500/10 text-purple-600 w-fit">
+                                Module: {(rec.courseModule?.title || rec.liveClass?.courseModule?.title)}
                               </span>
                             )}
                             {(rec.lesson || rec.liveClass?.lesson) && (

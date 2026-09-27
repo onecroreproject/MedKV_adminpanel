@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { ArrowLeft, Save, X, Video, Upload, Link as LinkIcon, Settings, Shield, BookOpen, Layers } from 'lucide-react';
 import { getCourses, getCourseById } from '../../services/courseService';
 import { getFaculty } from '../../services/facultyService';
+import { getLiveClasses } from '../../services/liveClassService';
 import { createRecording } from '../../services/recordingService';
 
 export default function UploadRecording() {
@@ -11,6 +12,7 @@ export default function UploadRecording() {
   const { register, handleSubmit, watch } = useForm();
   const [courses, setCourses] = useState([]);
   const [facultyList, setFacultyList] = useState([]);
+  const [liveClasses, setLiveClasses] = useState([]);
   const [modules, setModules] = useState([]);
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -48,12 +50,14 @@ export default function UploadRecording() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [coursesRes, facultyRes] = await Promise.all([
+        const [coursesRes, facultyRes, liveClassesRes] = await Promise.all([
           getCourses(),
-          getFaculty()
+          getFaculty(),
+          getLiveClasses()
         ]);
         if (coursesRes.success) setCourses(coursesRes.data);
         if (facultyRes.success) setFacultyList(facultyRes.data);
+        if (liveClassesRes.success) setLiveClasses(liveClassesRes.data);
       } catch (err) {
         console.error('Failed to load form data', err);
       }
@@ -70,6 +74,7 @@ export default function UploadRecording() {
         course: data.course || undefined,
         courseModule: data.courseModule || undefined,
         lesson: data.lesson || undefined,
+        liveClass: data.liveClass || undefined,
         faculty: data.faculty || undefined,
         videoUrl: data.videoUrl,
         duration: data.duration ? `${data.duration}m` : undefined,
@@ -166,6 +171,16 @@ export default function UploadRecording() {
                 </select>
               </div>
             )}
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1.5 flex items-center gap-1.5"><Video className="w-3.5 h-3.5" /> Attach to Live Class</label>
+              <select {...register("liveClass")} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20">
+                <option value="">Select Live Class (Optional)</option>
+                {liveClasses.map(lc => (
+                  <option key={lc._id} value={lc._id}>{lc.title}</option>
+                ))}
+              </select>
+            </div>
+            
             <div>
               <label className="block text-sm font-medium text-text-main mb-1.5">Faculty Selection *</label>
               <select {...register("faculty", { required: true })} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20">
