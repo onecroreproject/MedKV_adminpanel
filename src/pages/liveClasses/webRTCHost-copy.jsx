@@ -23,36 +23,36 @@ import '@livekit/components-styles';
 import { Track, AudioPresets } from 'livekit-client';
 
 const LOW_LATENCY_OPTIONS = {
-  adaptiveStream: true,
+  adaptiveStream: false,
   dynacast: true,
   stopLocalTrackOnUnpublish: true,
-
+  reconnectPolicy: {
+    nextRetryDelayInMs: (context) => {
+      if (context.retryCount === 0) return 300;
+      if (context.retryCount < 4) return 1000 * context.retryCount;
+      return null;
+    },
+  },
   audioCaptureDefaults: {
     echoCancellation: true,
     noiseSuppression: true,
     autoGainControl: true,
   },
-
   audioOutput: {
     deviceId: 'default',
   },
-
   publishDefaults: {
     audioPreset: AudioPresets.speech,
-
     videoCodec: 'vp8',
     simulcast: true,
-
     videoEncoding: {
-      maxBitrate: 1500000,
+      maxBitrate: 2_500_000,
       maxFramerate: 30,
     },
-
     screenShareEncoding: {
-      maxBitrate: 2500000,
-      maxFramerate: 15,
+      maxBitrate: 3_000_000,
+      maxFramerate: 30,
     },
-
     dtx: false,
     red: false,
   },
