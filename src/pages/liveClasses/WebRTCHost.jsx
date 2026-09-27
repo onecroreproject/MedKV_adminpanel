@@ -680,18 +680,18 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
                       {!p.isLocal && (
                         <div className="flex gap-2">
                           {!p.isMicrophoneEnabled ? (
-                            <button onClick={() => handleForceUnmute(p.identity)} className="p-1.5 bg-red-500/20 hover:bg-green-500 rounded text-red-400 hover:text-white transition" title="Force Unmute">
+                            <div className="p-1.5 bg-red-500/10 rounded text-red-500/50 cursor-not-allowed" title="Microphone is Off (Cannot force on)">
                               <MicOff size={14} />
-                            </button>
+                            </div>
                           ) : (
                             <button onClick={() => handleForceMute(p.identity)} className="p-1.5 bg-slate-600 hover:bg-red-500 rounded text-slate-300 transition" title="Force Mute">
                               <Mic size={14} />
                             </button>
                           )}
                           {!p.isCameraEnabled ? (
-                            <button onClick={() => handleForceCameraOn(p.identity)} className="p-1.5 bg-red-500/20 hover:bg-green-500 rounded text-red-400 hover:text-white transition" title="Force Camera On">
+                            <div className="p-1.5 bg-red-500/10 rounded text-red-500/50 cursor-not-allowed" title="Camera is Off (Cannot force on)">
                               <VideoOff size={14} />
-                            </button>
+                            </div>
                           ) : (
                             <button onClick={() => handleForceCameraOff(p.identity)} className="p-1.5 bg-slate-600 hover:bg-red-500 rounded text-slate-300 transition" title="Force Camera Off">
                               <Video size={14} />
