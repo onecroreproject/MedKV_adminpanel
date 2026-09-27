@@ -203,6 +203,38 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const navigate = useNavigate();
 
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled, cameraTrack, screenShareTrack } = useLocalParticipant();
+
+  const recoverCamera = async () => {
+    if (cameraRecovering) return;
+
+    try {
+      setCameraRecovering(true);
+      setCameraError(false);
+
+      console.log('Starting camera recovery...');
+
+      // First release the current LiveKit camera track
+      if (localParticipant.isCameraEnabled) {
+        await localParticipant.setCameraEnabled(false);
+      }
+
+      // Give the browser/OS time to release the camera hardware
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Request the camera again
+      await localParticipant.setCameraEnabled(true);
+
+      console.log('Camera recovery successful');
+      setCameraError(false);
+
+    } catch (error) {
+      console.error('Camera recovery failed:', error);
+      setCameraError(true);
+    } finally {
+      setCameraRecovering(false);
+    }
+  };
+
   const participants = useParticipants();
   // Fetch ALL tracks so the host can see students who turn on their camera
   const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare], { onlySubscribed: false });
@@ -215,6 +247,9 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const [activeFilter, setActiveFilter] = useState('all');
   const [toastMessage, setToastMessage] = useState(null);
   const [waitingParticipants, setWaitingParticipants] = useState([]);
+  
+  const [cameraError, setCameraError] = useState(false);
+  const [cameraRecovering, setCameraRecovering] = useState(false);
 
   const mainVideoWrapperRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -226,6 +261,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
 
   const activeTabRef = useRef(activeTab);
   const chatOpenRef = useRef(chatOpen);
+  const cameraRecoveryAttemptedRef = useRef(false);
 
   const logEvent = (action, details = {}) => {
     logLiveClassEvent(roomId, {
@@ -345,11 +381,26 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
 
   const toggleVideo = async () => {
     try {
-      await localParticipant.setCameraEnabled(!isCameraEnabled);
-      logEvent('TOGGLE_CAMERA', { enabled: !isCameraEnabled });
+      const newState = !isCameraEnabled;
+  
+      await localParticipant.setCameraEnabled(newState);
+  
+      setCameraError(false);
+      cameraRecoveryAttemptedRef.current = false;
+  
+      logEvent('TOGGLE_CAMERA', {
+        enabled: newState
+      });
+  
     } catch (err) {
-      logEvent('ERROR_CAMERA', { error: err.message });
-      alert("Failed to access camera. It might be blocked or missing.");
+      console.error('Camera toggle failed:', err);
+  
+      logEvent('ERROR_CAMERA', {
+        error: err.message,
+        name: err.name
+      });
+  
+      setCameraError(true);
     }
   };
 
@@ -790,6 +841,28 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
         )}
       </div>
 
+      {cameraError && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 bg-orange-600 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-4">
+          <div>
+            <div className="font-bold">
+              Camera unavailable
+            </div>
+      
+            <div className="text-xs opacity-90">
+              The camera may be temporarily locked by the browser.
+            </div>
+          </div>
+      
+          <button
+            onClick={recoverCamera}
+            disabled={cameraRecovering}
+            className="bg-white text-orange-700 px-4 py-2 rounded-lg font-bold text-sm disabled:opacity-50"
+          >
+            {cameraRecovering ? 'Recovering...' : 'Recover Camera'}
+          </button>
+        </div>
+      )}
+
       {/* Control Bar */}
       <footer className="bg-slate-800 pt-3 pb-10 md:p-4 md:pb-4 flex flex-wrap justify-center md:justify-between items-center gap-2 md:gap-4 shrink-0">
         <div className="hidden md:flex gap-2 w-1/4"></div>
@@ -801,6 +874,16 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
           <button onClick={toggleVideo} className={`p-3 rounded-full ${!isCameraEnabled ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-600 hover:bg-slate-500'} transition`}>
             {!isCameraEnabled ? <VideoOff size={20} /> : <Video size={20} />}
           </button>
+
+          {cameraError && (
+            <button
+              onClick={recoverCamera}
+              disabled={cameraRecovering}
+              className="px-4 py-2 rounded-full bg-orange-600 hover:bg-orange-700 disabled:bg-slate-600 text-white text-sm font-semibold transition"
+            >
+              {cameraRecovering ? 'Recovering...' : 'Recover Camera'}
+            </button>
+          )}
 
           <button onClick={toggleScreenShare} className={`p-3 rounded-full ${isScreenShareEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-slate-600 hover:bg-slate-500'} transition`} title="Share Screen">
             <MonitorUp size={20} />
