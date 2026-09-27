@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { webrtcService } from '../../services/webrtcService';
 import { Mic, MicOff, Video, VideoOff, MonitorUp, SquareSquare, PhoneOff, MessageSquare, Hand, Users, Circle, Square, Maximize, Minimize } from 'lucide-react';
 import axios from 'axios';
+import { logLiveClassEvent } from '../../services/liveClassService';
 import darkLogo from '../../assets/logos/dark_logo_transparent.png';
 
 import {
@@ -226,6 +227,21 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const activeTabRef = useRef(activeTab);
   const chatOpenRef = useRef(chatOpen);
   
+  const logEvent = (action, details = {}) => {
+    logLiveClassEvent(roomId, {
+      action,
+      details,
+      userId: user._id || user.id,
+      userName: user.name,
+      role: 'teacher'
+    });
+  };
+
+  useEffect(() => {
+    logEvent('JOINED_CLASSROOM', { timestamp: new Date().toISOString() });
+    return () => logEvent('LEFT_CLASSROOM');
+  }, []);
+
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
   useEffect(() => { chatOpenRef.current = chatOpen; }, [chatOpen]);
   
@@ -320,7 +336,9 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const toggleMute = async () => {
     try {
       await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+      logEvent('TOGGLE_MIC', { enabled: !isMicrophoneEnabled });
     } catch (err) {
+      logEvent('ERROR_MIC', { error: err.message });
       alert("Failed to access microphone. Please check permissions.");
     }
   };
@@ -328,7 +346,9 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const toggleVideo = async () => {
     try {
       await localParticipant.setCameraEnabled(!isCameraEnabled);
+      logEvent('TOGGLE_CAMERA', { enabled: !isCameraEnabled });
     } catch (err) {
+      logEvent('ERROR_CAMERA', { error: err.message });
       alert("Failed to access camera. It might be blocked or missing.");
     }
   };
@@ -336,8 +356,10 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const toggleScreenShare = async () => {
     try {
       await localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
+      logEvent('TOGGLE_SCREENSHARE', { enabled: !isScreenShareEnabled });
     } catch (err) {
       console.warn("Screen share was canceled or failed:", err);
+      logEvent('ERROR_SCREENSHARE', { error: err.message });
     }
   };
 

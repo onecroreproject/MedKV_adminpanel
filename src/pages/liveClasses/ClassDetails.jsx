@@ -230,8 +230,8 @@ export default function ClassDetails() {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 bg-gray-100/50 p-1 rounded-lg border border-gray-200 w-full sm:w-fit">
-        {['overview', 'attendance', 'recordings'].map((tab) => (
+      <div className="flex space-x-1 bg-gray-100/50 p-1 rounded-lg border border-gray-200 w-full sm:w-fit overflow-x-auto">
+        {['overview', 'attendance', 'recordings', 'diagnostics'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -316,6 +316,63 @@ export default function ClassDetails() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Diagnostics Tab */}
+        {activeTab === 'diagnostics' && (
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 className="font-bold text-text-main">System Event Logs</h3>
+              <span className="text-xs text-text-muted">{session.logs?.length || 0} events recorded</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 text-xs uppercase tracking-wider text-text-muted border-b border-gray-100">
+                    <th className="px-6 py-4 font-semibold">Timestamp</th>
+                    <th className="px-6 py-4 font-semibold">User</th>
+                    <th className="px-6 py-4 font-semibold">Action</th>
+                    <th className="px-6 py-4 font-semibold">Details</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {session.logs && session.logs.length > 0 ? (
+                    [...session.logs].reverse().map((log, index) => (
+                      <tr key={index} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-4 text-sm text-text-muted whitespace-nowrap">
+                          {new Date(log.timestamp).toLocaleTimeString()}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-text-main">{log.userName || 'Unknown'}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded uppercase">{log.role || 'user'}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                            log.action.includes('ERROR') ? 'bg-red-50 text-red-600' :
+                            log.action.includes('JOIN') ? 'bg-green-50 text-green-600' :
+                            'bg-blue-50 text-blue-600'
+                          }`}>
+                            {log.action}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-text-muted">
+                          <pre className="bg-gray-50 p-2 rounded text-xs border border-gray-100 overflow-auto max-w-md">
+                            {JSON.stringify(log.details || {}, null, 2)}
+                          </pre>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="4" className="px-6 py-8 text-center text-text-muted">No diagnostic logs found for this session.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
