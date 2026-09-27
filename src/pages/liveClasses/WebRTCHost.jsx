@@ -201,7 +201,7 @@ export default function WebRTCHost() {
 function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const navigate = useNavigate();
   
-  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled, cameraTrack, screenShareTrack } = useLocalParticipant();
   const participants = useParticipants();
   // Fetch ALL tracks so the host can see students who turn on their camera
   const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare], { onlySubscribed: false });
@@ -510,19 +510,16 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
             <div className="flex-1 w-full relative rounded-lg overflow-hidden border border-slate-800 group">
               {localParticipant && <VoiceIndicator participant={localParticipant} />}
               {(() => {
-                const isScreenShareOn = isScreenShareEnabled;
-                const isCameraOn = isCameraEnabled;
+                const activeTrackRef = (isScreenShareEnabled && screenShareTrack)
+                  ? { participant: localParticipant, source: Track.Source.ScreenShare, publication: screenShareTrack }
+                  : (isCameraEnabled && cameraTrack)
+                  ? { participant: localParticipant, source: Track.Source.Camera, publication: cameraTrack }
+                  : null;
 
-                if (isScreenShareOn) {
+                if (activeTrackRef) {
                   return (
                     <div className="w-full h-full">
-                      <ParticipantTile participant={localParticipant} source={Track.Source.ScreenShare} style={{ height: '100%', width: '100%' }} />
-                    </div>
-                  );
-                } else if (isCameraOn) {
-                  return (
-                    <div className="w-full h-full">
-                      <ParticipantTile participant={localParticipant} source={Track.Source.Camera} style={{ height: '100%', width: '100%' }} />
+                      <ParticipantTile trackRef={activeTrackRef} style={{ height: '100%', width: '100%' }} />
                     </div>
                   );
                 }
