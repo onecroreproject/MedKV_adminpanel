@@ -41,7 +41,7 @@ const LOW_LATENCY_OPTIONS = {
     deviceId: 'default',
   },
   publishDefaults: {
-    audioPreset: AudioPresets.music,
+    audioPreset: AudioPresets.speech,
     videoCodec: 'vp8',
     simulcast: true,
     videoEncoding: {
@@ -52,8 +52,8 @@ const LOW_LATENCY_OPTIONS = {
       maxBitrate: 3_000_000,
       maxFramerate: 30,
     },
-    dtx: true,
-    red: true,
+    dtx: false,
+    red: false,
   },
 };
 
