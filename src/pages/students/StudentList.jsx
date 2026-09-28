@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Download, MoreVertical, Search, Filter, Mail, Phone, Calendar, Edit, Trash2, Ban, Eye } from 'lucide-react';
 import Badge from '../../components/common/Badge';
-import { getStudents } from '../../services/studentService';
+import { getStudents, deleteStudent } from '../../services/studentService';
 import { getCourses } from '../../services/courseService';
 import { exportToCSV } from '../../utils/exportUtils';
 import { createPortal } from 'react-dom';
@@ -122,6 +122,18 @@ export default function StudentList() {
       { label: 'Average Progress', key: 'averageProgress' }
     ];
     exportToCSV(exportData, headers, 'students_export.csv');
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this student?')) {
+      try {
+        await deleteStudent(id);
+        setStudents(students.filter(student => student._id !== id));
+      } catch (err) {
+        console.error('Failed to delete student:', err);
+        alert('Failed to delete student. Please try again.');
+      }
+    }
   };
 
   return (
@@ -315,7 +327,7 @@ export default function StudentList() {
                           <Ban className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => {}}
+                          onClick={() => handleDelete(student._id)}
                           className="p-2 hover:bg-red-50 rounded-lg text-red-500 hover:text-red-600 transition-colors"
                           title="Delete Account"
                         >

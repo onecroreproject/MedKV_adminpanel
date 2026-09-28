@@ -15,3 +15,8 @@ export const sendMessageToStudent = async (id, messageData) => {
   const response = await axiosInstance.post(`/students/${id}/message`, messageData);
   return response.data;
 };
+
+export const deleteStudent = async (id) => {
+  const response = await axiosInstance.delete(`/students/${id}`);
+  return response.data;
+};
