@@ -143,8 +143,8 @@ export default function ClassRecordingList() {
                     {formatSize(rec.fileSize)}
                   </td>
                   <td className="px-6 py-4">
-                    <Badge status={rec.status === 'EGRESS_COMPLETE' ? 'success' : (rec.status === 'EGRESS_STARTING' || rec.status === 'EGRESS_ACTIVE' ? 'warning' : 'danger')}>
-                      {rec.status}
+                    <Badge status={(rec.recordingState === 'completed' || rec.status === 'EGRESS_COMPLETE') ? 'success' : (rec.recordingState === 'failed' || rec.status === 'EGRESS_FAILED' ? 'danger' : 'warning')}>
+                      {rec.recordingState ? rec.recordingState.toUpperCase() : rec.status}
                     </Badge>
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -153,7 +153,7 @@ export default function ClassRecordingList() {
                         onClick={() => setSelectedVideo(rec)} 
                         className="p-1.5 hover:bg-blue-50 rounded-lg text-gray-400 hover:text-brand-primary transition-colors"
                         title="View / Play"
-                        disabled={rec.status !== 'EGRESS_COMPLETE'}
+                        disabled={!(rec.recordingState === 'completed' || rec.status === 'EGRESS_COMPLETE')}
                       >
                         <PlayCircle className="w-4 h-4" />
                       </button>
@@ -167,9 +167,9 @@ export default function ClassRecordingList() {
                       <a 
                         href={`${baseUrl}/api/v1/class-recordings/${rec._id}/download`} 
                         download
-                        className={`p-1.5 rounded-lg transition-colors ${rec.status !== 'EGRESS_COMPLETE' ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-green-50 text-gray-400 hover:text-green-600'}`}
+                        className={`p-1.5 rounded-lg transition-colors ${!(rec.recordingState === 'completed' || rec.status === 'EGRESS_COMPLETE') ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-green-50 text-gray-400 hover:text-green-600'}`}
                         title="Download MP4"
-                        onClick={(e) => rec.status !== 'EGRESS_COMPLETE' && e.preventDefault()}
+                        onClick={(e) => !(rec.recordingState === 'completed' || rec.status === 'EGRESS_COMPLETE') && e.preventDefault()}
                       >
                         <Download className="w-4 h-4" />
                       </a>

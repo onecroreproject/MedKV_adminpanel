@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { webrtcService } from '../../services/webrtcService';
-import { Mic, MicOff, Video, VideoOff, MonitorUp, SquareSquare, PhoneOff, MessageSquare, Hand, Users, Circle, Square, Maximize, Minimize } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, MessageSquare, Hand, Users, Circle, Square, Play, Pause, Maximize, Minimize } from 'lucide-react';
 import axios from 'axios';
 import { logLiveClassEvent } from '../../services/liveClassService';
 import darkLogo from '../../assets/logos/dark_logo_transparent.png';
@@ -224,10 +224,10 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   const mainVideoWrapperRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
-  const [isRecording, setIsRecording] = useState(false);
-  const [showRecordingInstructions, setShowRecordingInstructions] = useState(false);
-  const mediaRecorderRef = useRef(null);
-  const recordedChunks = useRef([]);
+
+  // New Recording States
+  const [recordingState, setRecordingState] = useState('idle'); // idle, recording, paused, processing, completed
+  const [recordingDuration, setRecordingDuration] = useState(0);
 
   const activeTabRef = useRef(activeTab);
   const chatOpenRef = useRef(chatOpen);
@@ -256,15 +256,47 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
     const handleBeforeUnload = (e) => {
       e.preventDefault();
       let message = "Are you sure you want to leave the class?";
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        message = "WARNING: You are currently recording! If you refresh or leave now, your recording WILL BE LOST completely. Please cancel and stop the recording first to save it.";
+      if (recordingState === 'recording' || recordingState === 'paused') {
+        message = "WARNING: Recording is active! If you leave, the recording will remain active on the server. Please stop it if you intend to finish.";
       }
       e.returnValue = message;
       return message;
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
+  }, [recordingState]);
+
+  // Fetch initial recording status and set up timer
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const { getRecordingStatus } = await import('../../services/classRecordingService');
+        const res = await getRecordingStatus(roomId);
+        if (res.success && res.data) {
+          setRecordingState(res.data.recordingState);
+          setRecordingDuration(res.data.accumulatedDuration || 0);
+        }
+      } catch (err) {}
+    };
+    fetchStatus();
+  }, [roomId]);
+
+  useEffect(() => {
+    let intervalId;
+    if (recordingState === 'recording') {
+      intervalId = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(intervalId);
+  }, [recordingState]);
+
+  const formatTime = (secs) => {
+    const hrs = Math.floor(secs / 3600);
+    const mins = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    return `${hrs > 0 ? hrs.toString().padStart(2, '0') + ':' : ''}${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     if (chatOpen && activeTab === 'chat') {
@@ -425,100 +457,53 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
     }
   };
 
-  const toggleRecording = () => {
-    if (isRecording) {
-      if (mediaRecorderRef.current) mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    } else {
-      setShowRecordingInstructions(true);
+  const handleStartRecording = async () => {
+    try {
+      setRecordingState('recording');
+      const { startRecording } = await import('../../services/classRecordingService');
+      await startRecording(roomId);
+      logEvent('START_RECORDING');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to start recording: ' + (err.response?.data?.message || err.message));
+      setRecordingState('idle');
     }
   };
 
-  const startActualRecording = async () => {
+  const handlePauseRecording = async () => {
     try {
-      // Check local storage space before starting
-      if (navigator.storage && navigator.storage.estimate) {
-        const estimate = await navigator.storage.estimate();
-        const availableMB = (estimate.quota - estimate.usage) / (1024 * 1024);
-
-        if (availableMB < 1024) { // Less than 1 GB
-          const proceed = window.confirm(`WARNING: Your browser indicates you have low storage space (${Math.round(availableMB)} MB available). Long recordings might fail to save. Do you still want to proceed?`);
-          if (!proceed) return;
-        }
-      }
-
-      // 1. Get the screen stream (Video + Students Audio via "Share tab audio")
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { displaySurface: "browser" },
-        audio: true
-      });
-
-      // 2. Get the microphone stream (Teacher's Audio)
-      let micStream;
-      try {
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (e) {
-        console.warn("Could not capture microphone for recording mix", e);
-      }
-
-      // 3. Mix audio streams
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      const audioContext = new AudioContextClass();
-      const dest = audioContext.createMediaStreamDestination();
-
-      let hasAudio = false;
-      if (screenStream.getAudioTracks().length > 0) {
-        const screenSource = audioContext.createMediaStreamSource(screenStream);
-        screenSource.connect(dest);
-        hasAudio = true;
-      }
-      if (micStream && micStream.getAudioTracks().length > 0) {
-        const micSource = audioContext.createMediaStreamSource(micStream);
-        micSource.connect(dest);
-        hasAudio = true;
-      }
-
-      // 4. Combine Video + Mixed Audio
-      const tracks = [screenStream.getVideoTracks()[0]];
-      if (hasAudio && dest.stream.getAudioTracks().length > 0) {
-        tracks.push(dest.stream.getAudioTracks()[0]);
-      }
-      const combinedStream = new MediaStream(tracks);
-
-      recordedChunks.current = [];
-      mediaRecorderRef.current = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
-
-      mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) recordedChunks.current.push(e.data);
-      };
-
-      mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(recordedChunks.current, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-
-        const safeCourseName = courseName.replace(/[^a-zA-Z0-9]/g, '_');
-        const timestamp = new Date().toISOString().slice(0, 10);
-        a.download = `${safeCourseName}_Recording_${timestamp}.webm`;
-
-        a.click();
-        window.URL.revokeObjectURL(url);
-
-        // Cleanup all tracks and contexts
-        screenStream.getTracks().forEach(t => t.stop());
-        if (micStream) micStream.getTracks().forEach(t => t.stop());
-        combinedStream.getTracks().forEach(t => t.stop());
-        if (audioContext.state !== 'closed') audioContext.close();
-      };
-
-      mediaRecorderRef.current.start();
-      setIsRecording(true);
+      setRecordingState('paused');
+      const { pauseRecording } = await import('../../services/classRecordingService');
+      await pauseRecording(roomId);
+      logEvent('PAUSE_RECORDING');
     } catch (err) {
-      console.error("Recording failed", err);
-      if (err.name !== 'NotAllowedError') {
-        alert("Failed to start recording. Check permissions.");
-      }
+      console.error(err);
+      alert('Failed to pause recording');
+    }
+  };
+
+  const handleResumeRecording = async () => {
+    try {
+      setRecordingState('recording');
+      const { resumeRecording } = await import('../../services/classRecordingService');
+      await resumeRecording(roomId);
+      logEvent('RESUME_RECORDING');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to resume recording');
+      setRecordingState('paused');
+    }
+  };
+
+  const handleStopRecording = async () => {
+    try {
+      setRecordingState('processing');
+      const { stopRecording } = await import('../../services/classRecordingService');
+      await stopRecording(roomId);
+      logEvent('STOP_RECORDING');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to stop recording');
     }
   };
 
@@ -610,7 +595,12 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
         <div className="flex items-center gap-2 md:gap-4 truncate">
           <div className="flex items-center gap-2 md:gap-3 shrink-0">
             <img src={darkLogo} alt="Logo" className="h-6 md:h-8 object-contain" />
-            <h1 className="font-bold text-sm md:text-lg truncate">Live Classroom {isRecording && <span className="text-red-500 ml-2 animate-pulse hidden md:inline">● Recording</span>}</h1>
+            <h1 className="font-bold text-sm md:text-lg truncate">
+              Live Classroom 
+              {recordingState === 'recording' && <span className="text-red-500 ml-2 animate-pulse hidden md:inline">● Recording {formatTime(recordingDuration)}</span>}
+              {recordingState === 'paused' && <span className="text-orange-500 ml-2 hidden md:inline">⏸ Paused {formatTime(recordingDuration)}</span>}
+              {recordingState === 'processing' && <span className="text-blue-500 ml-2 hidden md:inline">⚙ Processing...</span>}
+            </h1>
           </div>
           <div className="h-6 w-px bg-slate-600 mx-1 md:mx-2 shrink-0"></div>
           <div className="flex items-center gap-2 md:gap-3 shrink-0">
@@ -900,9 +890,41 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
             <MonitorUp size={20} />
           </button>
 
-          <button onClick={toggleRecording} className={`p-3 rounded-full ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-slate-600 hover:bg-slate-500'} transition`} title={isRecording ? 'Stop Recording' : 'Start Recording'}>
-            {isRecording ? <Square size={20} fill="white" /> : <Circle size={20} fill="white" />}
-          </button>
+          <div className="flex gap-2 bg-slate-700/50 p-1.5 rounded-full border border-slate-600/50">
+            {recordingState === 'idle' && (
+              <button onClick={handleStartRecording} className="px-4 py-2 rounded-full bg-red-600 hover:bg-red-700 text-white font-bold text-sm flex items-center gap-2 transition shadow-lg" title="Start Recording">
+                <Circle size={16} fill="white" /> <span className="hidden sm:inline">Start Rec</span>
+              </button>
+            )}
+            
+            {recordingState === 'recording' && (
+              <>
+                <button onClick={handlePauseRecording} className="px-4 py-2 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm flex items-center gap-2 transition" title="Pause Recording">
+                  <Pause size={16} fill="white" /> <span className="hidden sm:inline">Pause</span>
+                </button>
+                <button onClick={handleStopRecording} className="px-4 py-2 rounded-full bg-slate-600 hover:bg-slate-500 text-white font-bold text-sm flex items-center gap-2 transition" title="Stop Recording">
+                  <Square size={16} fill="white" /> <span className="hidden sm:inline">Stop</span>
+                </button>
+              </>
+            )}
+
+            {recordingState === 'paused' && (
+              <>
+                <button onClick={handleResumeRecording} className="px-4 py-2 rounded-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm flex items-center gap-2 transition" title="Resume Recording">
+                  <Play size={16} fill="white" /> <span className="hidden sm:inline">Resume</span>
+                </button>
+                <button onClick={handleStopRecording} className="px-4 py-2 rounded-full bg-slate-600 hover:bg-slate-500 text-white font-bold text-sm flex items-center gap-2 transition" title="Stop Recording">
+                  <Square size={16} fill="white" /> <span className="hidden sm:inline">Stop</span>
+                </button>
+              </>
+            )}
+            
+            {recordingState === 'processing' && (
+              <div className="px-4 py-2 rounded-full bg-slate-600 text-white font-bold text-sm flex items-center gap-2 opacity-50 cursor-not-allowed">
+                ⚙ Processing...
+              </div>
+            )}
+          </div>
 
           <button onClick={leaveRoom} className="px-4 py-2 md:p-3 md:px-6 rounded-full bg-red-600 hover:bg-red-700 transition font-bold flex items-center gap-2 text-sm md:text-base">
             <PhoneOff size={20} /> <span className="hidden sm:inline">End Class</span>
@@ -916,32 +938,6 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
         </div>
       </footer>
 
-      {/* Recording Instructions Modal */}
-      {showRecordingInstructions && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl max-w-lg w-full shadow-2xl">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-3">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
-              How to Record Properly
-            </h2>
-            <p className="text-slate-300 text-sm mb-4 leading-relaxed">Because we are recording locally to your computer, Chrome strictly requires you to manually select the screen.</p>
-            <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-6">
-              <ol className="list-decimal pl-5 space-y-3 text-sm text-slate-300">
-                <li>Click the <strong className="text-white bg-slate-700 px-1.5 py-0.5 rounded border border-slate-600">Chrome Tab</strong> option at the very top of the popup.</li>
-                <li>Select <strong className="text-brand-accent">this exact tab</strong> from the list.</li>
-                <li><strong className="text-red-400">CRITICAL:</strong> Check the box at the bottom that says <strong className="text-white">"Share tab audio"</strong> (If you forget this, the students' voices will be totally silent in the recording!).</li>
-                <li>Click the blue <strong className="text-white">Share</strong> button.</li>
-              </ol>
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => setShowRecordingInstructions(false)} className="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors font-medium text-sm">Cancel</button>
-              <button onClick={() => { setShowRecordingInstructions(false); startActualRecording(); }} className="px-5 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 font-bold transition-colors shadow-[0_4px_14px_rgba(239,68,68,0.3)] text-sm">
-                I Understand, Start Recording
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

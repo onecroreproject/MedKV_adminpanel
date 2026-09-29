@@ -34,3 +34,35 @@ export const deleteClassRecording = async (id) => {
   });
   return response.data;
 };
+
+// Recording Controls
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return { headers: { Authorization: `Bearer ${token}` } };
+};
+
+export const startRecording = async (roomName) => {
+  const response = await axios.post(`${API_URL}/start`, { roomName }, getAuthHeaders());
+  return response.data;
+};
+
+export const pauseRecording = async (roomName) => {
+  const response = await axios.post(`${API_URL}/pause`, { roomName }, getAuthHeaders());
+  return response.data;
+};
+
+export const resumeRecording = async (roomName) => {
+  const response = await axios.post(`${API_URL}/resume`, { roomName }, getAuthHeaders());
+  return response.data;
+};
+
+export const stopRecording = async (roomName) => {
+  const response = await axios.post(`${API_URL}/stop`, { roomName }, getAuthHeaders());
+  return response.data;
+};
+
+export const getRecordingStatus = async (roomName) => {
+  const response = await axios.get(`${API_URL}/status/${roomName}`, getAuthHeaders());
+  return response.data;
+};
+
