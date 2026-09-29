@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import { ArrowLeft, Save, X, Video, Calendar, Link as LinkIcon, Shield, Clock, BookOpen, Layers, CheckSquare, CheckCircle } from 'lucide-react';
 import { getCourses, getCourseById } from '../../services/courseService';
 import { getFaculty } from '../../services/facultyService';
@@ -11,7 +13,7 @@ export default function ScheduleClass() {
   const navigate = useNavigate();
   const isEditMode = Boolean(id);
   const [existingSession, setExistingSession] = useState(null);
-  const { register, handleSubmit, getValues, watch, reset } = useForm({
+  const { register, handleSubmit, getValues, watch, reset, control } = useForm({
     defaultValues: {
       meetingProvider: 'zoom'
     }
@@ -292,12 +294,19 @@ export default function ScheduleClass() {
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-text-main mb-1.5">Session Notes</label>
               <div className="border border-gray-200 rounded-lg overflow-hidden focus-within:ring-1 focus-within:border-brand-primary focus-within:ring-brand-primary/20">
-                <div className="bg-gray-50 border-b border-gray-200 px-3 py-2 flex gap-2">
-                  <span className="text-xs font-bold px-2 py-1 bg-white border border-gray-200 rounded">B</span>
-                  <span className="text-xs italic px-2 py-1 bg-white border border-gray-200 rounded">I</span>
-                  <span className="text-xs underline px-2 py-1 bg-white border border-gray-200 rounded">U</span>
-                </div>
-                <textarea {...register("notes")} rows={4} className="w-full px-4 py-3 text-sm focus:outline-none" placeholder="Enter agenda, learning objectives, or prerequisites..." />
+                <Controller
+                  name="notes"
+                  control={control}
+                  render={({ field }) => (
+                    <ReactQuill 
+                      theme="snow" 
+                      value={field.value || ''} 
+                      onChange={field.onChange}
+                      placeholder="Enter agenda, learning objectives, or prerequisites..."
+                      className="bg-white border-none"
+                    />
+                  )}
+                />
               </div>
             </div>
           </div>
