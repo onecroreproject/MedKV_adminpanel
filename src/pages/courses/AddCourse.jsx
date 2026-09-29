@@ -75,6 +75,8 @@ export default function AddCourse() {
           setValue('thumbnail', course.thumbnail || '');
           setValue('banner', course.banner || '');
           setValue('isImportant', course.isImportant || false);
+          setValue('isFeatured', course.isImportant || false);
+          setValue('isFree', course.price === 0);
           
           setValue('startDate', course.startDate || '');
           setValue('startTime', course.startTime || '');
@@ -139,6 +141,11 @@ export default function AddCourse() {
         finalOriginalPrice = Number(data.regularPrice);
       }
 
+      if (data.isFree) {
+        finalPrice = 0;
+        finalOriginalPrice = 0;
+      }
+
       if (!data.title) {
         alert("Course Title is required.");
         setIsSubmitting(false);
@@ -151,7 +158,7 @@ export default function AddCourse() {
         title: data.title,
         slug: data.slug || undefined,
         description: data.fullDesc || data.shortDesc || '',
-        isImportant: data.isImportant || false,
+        isImportant: data.isFeatured || false,
         category: data.category || undefined,
         level: data.difficulty || '',
         languages: data.languages || [],
@@ -435,7 +442,7 @@ export default function AddCourse() {
               <div className="flex flex-col justify-center space-y-4 pt-6">
                 <label className="flex items-center gap-3 cursor-pointer group">
                   <div className="relative">
-                    <input type="checkbox" {...register('isFree')} className="sr-only" />
+                    <input type="checkbox" {...register('isFree')} className="sr-only peer" />
                     <div className="w-10 h-5 bg-gray-200 rounded-full group-hover:bg-gray-300 transition-colors peer-checked:bg-brand-primary"></div>
                     <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
                   </div>
@@ -443,7 +450,7 @@ export default function AddCourse() {
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer group">
                   <div className="relative">
-                    <input type="checkbox" {...register('isFeatured')} className="sr-only" />
+                    <input type="checkbox" {...register('isFeatured')} className="sr-only peer" />
                     <div className="w-10 h-5 bg-gray-200 rounded-full group-hover:bg-gray-300 transition-colors peer-checked:bg-brand-primary"></div>
                     <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
                   </div>
