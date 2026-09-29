@@ -144,26 +144,36 @@ export default function WebRTCHost() {
   const [hasJoined, setHasJoined] = useState(false);
   const [token, setToken] = useState('');
   const [preJoinChoices, setPreJoinChoices] = useState(null);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const handlePreJoinSubmit = async (choices) => {
     setPreJoinChoices(choices);
-    try {
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/token/livekit`, {
-        roomId,
-        participantName: user.name,
-        role: user.role
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+    setIsConnecting(true); // Triggers unmount of PreJoin
 
-      setToken(response.data.token);
-      setHasJoined(true);
+    // 1. Unmount PreJoin to release the hardware camera lock.
+    // 2. Wait 800ms for the browser to actually let go of the USB/built-in camera.
+    // 3. Then fetch the token and mount LiveKitRoom to grab it again cleanly.
+    setTimeout(async () => {
+      try {
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/token/livekit`, {
+          roomId,
+          participantName: user.name,
+          role: user.role
+        }, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
 
-    } catch (err) {
-      console.error('Failed to get token', err);
-      const backendMessage = err.response?.data?.message || err.message;
-      alert(`Connection failed: ${backendMessage}`);
-    }
+        setToken(response.data.token);
+        setHasJoined(true);
+        setIsConnecting(false);
+
+      } catch (err) {
+        console.error('Failed to get token', err);
+        const backendMessage = err.response?.data?.message || err.message;
+        alert(`Connection failed: ${backendMessage}`);
+        setIsConnecting(false);
+      }
+    }, 800);
   };
 
   if (!hasJoined || !token) {
@@ -171,12 +181,23 @@ export default function WebRTCHost() {
       <div className="flex flex-col items-center justify-center h-screen bg-slate-900 text-white p-6" data-lk-theme="default">
         <div className="bg-slate-800 p-8 rounded-2xl shadow-xl max-w-2xl w-full flex flex-col items-center">
           <img src={darkLogo} alt="Logo" className="h-12 mb-6 object-contain" />
-          <h1 className="text-3xl font-bold mb-6">Ready to join?</h1>
-          <style>{`.lk-prejoin input[type="text"] { display: none !important; }`}</style>
-          <PreJoin
-            defaults={{ username: user.name, videoEnabled: true, audioEnabled: true }}
-            onSubmit={handlePreJoinSubmit}
-          />
+          
+          {isConnecting ? (
+            <div className="flex flex-col items-center py-12">
+              <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
+              <h2 className="text-xl font-medium text-slate-300">Connecting to classroom...</h2>
+              <p className="text-slate-400 text-sm mt-2">Releasing camera locks...</p>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-3xl font-bold mb-6">Ready to join?</h1>
+              <style>{`.lk-prejoin input[type="text"] { display: none !important; }`}</style>
+              <PreJoin
+                defaults={{ username: user.name, videoEnabled: true, audioEnabled: true }}
+                onSubmit={handlePreJoinSubmit}
+              />
+            </>
+          )}
         </div>
       </div>
     );
@@ -189,7 +210,16 @@ export default function WebRTCHost() {
       token={token}
       serverUrl={import.meta.env.VITE_LIVEKIT_URL}
       connect={true}
-      options={LOW_LATENCY_OPTIONS}
+      options={{
+        ...LOW_LATENCY_OPTIONS,
+        videoCaptureDefaults: {
+          deviceId: preJoinChoices?.videoDeviceId || undefined,
+        },
+        audioCaptureDefaults: {
+          ...LOW_LATENCY_OPTIONS.audioCaptureDefaults,
+          deviceId: preJoinChoices?.audioDeviceId || undefined,
+        },
+      }}
       className="flex flex-col h-[100dvh] bg-slate-900 text-white relative"
       data-lk-theme="default"
     >
@@ -204,6 +234,20 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
 
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled, cameraTrack, screenShareTrack } = useLocalParticipant();
 
+  useEffect(() => {
+    console.log('🎥 CAMERA DEBUG', {
+      isCameraEnabled,
+      cameraTrack,
+      cameraTrackSid: cameraTrack?.trackSid,
+      cameraTrackKind: cameraTrack?.kind,
+      cameraTrackSource: cameraTrack?.source,
+      localParticipantIdentity: localParticipant?.identity,
+    });
+  }, [
+    isCameraEnabled,
+    cameraTrack,
+    localParticipant
+  ]);
 
   const participants = useParticipants();
   // Fetch ALL tracks so the host can see students who turn on their camera
@@ -632,16 +676,32 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
             <div className="flex-1 w-full relative rounded-lg overflow-hidden border border-slate-800 group">
               {localParticipant && <VoiceIndicator participant={localParticipant} />}
               {(() => {
-                const activeTrackRef = (isScreenShareEnabled && screenShareTrack)
-                  ? { participant: localParticipant, source: Track.Source.ScreenShare, publication: screenShareTrack }
-                  : (isCameraEnabled && cameraTrack)
-                    ? { participant: localParticipant, source: Track.Source.Camera, publication: cameraTrack }
-                    : null;
-
-                if (activeTrackRef) {
+                if (isScreenShareEnabled && screenShareTrack) {
                   return (
                     <div className="w-full h-full">
-                      <ParticipantTile trackRef={activeTrackRef} style={{ height: '100%', width: '100%' }} />
+                      <VideoTrack
+                        trackRef={{
+                          participant: localParticipant,
+                          source: Track.Source.ScreenShare,
+                          publication: screenShareTrack,
+                        }}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  );
+                }
+
+                if (isCameraEnabled && cameraTrack) {
+                  return (
+                    <div className="w-full h-full">
+                      <VideoTrack
+                        trackRef={{
+                          participant: localParticipant,
+                          source: Track.Source.Camera,
+                          publication: cameraTrack,
+                        }}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                   );
                 }
