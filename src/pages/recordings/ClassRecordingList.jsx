@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Search, PlayCircle, Download, Edit, Trash2, X, FileVideo } from 'lucide-react';
+import api from '../../services/axiosInstance';
 import Badge from '../../components/common/Badge';
 import { getClassRecordings, deleteClassRecording, updateClassRecording } from '../../services/classRecordingService';
 
@@ -10,6 +11,8 @@ export default function ClassRecordingList() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVideo, setSelectedVideo] = useState(null);
+  const [videoBlobUrl, setVideoBlobUrl] = useState(null);
+  const [isVideoLoading, setIsVideoLoading] = useState(false);
   const [editingVideo, setEditingVideo] = useState(null);
   const [portalsReady, setPortalsReady] = useState(false);
 
@@ -58,6 +61,79 @@ export default function ClassRecordingList() {
     } catch (err) {
       console.error('Failed to update', err);
     }
+  };
+
+  const handlePlay = async (rec) => {
+    try {
+      setIsVideoLoading(true);
+      setSelectedVideo(rec);
+      
+      const response = await api.get(`/class-recordings/${rec._id}/download`, {
+        responseType: 'blob'
+      });
+      
+      const blobUrl = URL.createObjectURL(response.data);
+      setVideoBlobUrl(blobUrl);
+    } catch (err) {
+      console.error('Failed to fetch video stream', err);
+      let errorMessage = 'Failed to load video. It may still be processing or unavailable.';
+      
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const json = JSON.parse(text);
+          errorMessage = json.message || errorMessage;
+        } catch (e) {}
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+      
+      alert(errorMessage);
+      setSelectedVideo(null);
+    } finally {
+      setIsVideoLoading(false);
+    }
+  };
+
+  const handleDownload = async (rec) => {
+    try {
+      const response = await api.get(`/class-recordings/${rec._id}/download`, {
+        responseType: 'blob'
+      });
+      
+      const blobUrl = URL.createObjectURL(response.data);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = rec.fileName || "class-recording.mp4";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Failed to download recording', err);
+      let errorMessage = 'Failed to download recording.';
+      
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const json = JSON.parse(text);
+          errorMessage = json.message || errorMessage;
+        } catch (e) {}
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+      
+      alert(errorMessage);
+    }
+  };
+
+  const closeVideoPlayer = () => {
+    if (videoBlobUrl) {
+      URL.revokeObjectURL(videoBlobUrl);
+      setVideoBlobUrl(null);
+    }
+    setSelectedVideo(null);
   };
 
   const formatSize = (bytes) => {
@@ -150,10 +226,10 @@ export default function ClassRecordingList() {
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button 
-                        onClick={() => setSelectedVideo(rec)} 
+                        onClick={() => handlePlay(rec)} 
                         className="p-1.5 hover:bg-blue-50 rounded-lg text-gray-400 hover:text-brand-primary transition-colors"
                         title="View / Play"
-                        disabled={!(rec.recordingState === 'completed' || rec.status === 'EGRESS_COMPLETE')}
+                        disabled={!(rec.recordingState === 'completed' || rec.status === 'EGRESS_COMPLETE') || isVideoLoading}
                       >
                         <PlayCircle className="w-4 h-4" />
                       </button>
@@ -164,15 +240,14 @@ export default function ClassRecordingList() {
                       >
                         <Edit className="w-4 h-4" />
                       </button>
-                      <a 
-                        href={`${baseUrl}/api/v1/class-recordings/${rec._id}/download`} 
-                        download
+                      <button 
+                        onClick={() => handleDownload(rec)} 
                         className={`p-1.5 rounded-lg transition-colors ${!(rec.recordingState === 'completed' || rec.status === 'EGRESS_COMPLETE') ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-green-50 text-gray-400 hover:text-green-600'}`}
                         title="Download MP4"
-                        onClick={(e) => !(rec.recordingState === 'completed' || rec.status === 'EGRESS_COMPLETE') && e.preventDefault()}
+                        disabled={!(rec.recordingState === 'completed' || rec.status === 'EGRESS_COMPLETE')}
                       >
                         <Download className="w-4 h-4" />
-                      </a>
+                      </button>
                       <button 
                         onClick={() => handleDelete(rec._id)} 
                         className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
@@ -196,21 +271,30 @@ export default function ClassRecordingList() {
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <h3 className="font-bold text-text-main">{selectedVideo.title}</h3>
               <button 
-                onClick={() => setSelectedVideo(null)}
+                onClick={closeVideoPlayer}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
             <div className="aspect-video bg-black flex items-center justify-center relative w-full">
-              <video 
-                controls 
-                autoPlay 
-                className="w-full h-full outline-none"
-                src={`${baseUrl}/api/v1/class-recordings/${selectedVideo._id}/stream`}
-              >
-                Your browser does not support the video tag.
-              </video>
+              {isVideoLoading ? (
+                <div className="flex flex-col items-center justify-center text-white">
+                  <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mb-4" />
+                  <p>Loading Secure Video...</p>
+                </div>
+              ) : videoBlobUrl ? (
+                <video 
+                  controls 
+                  autoPlay 
+                  className="w-full h-full outline-none"
+                  src={videoBlobUrl}
+                >
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <p className="text-white">Video unavailable</p>
+              )}
             </div>
           </div>
         </div>
