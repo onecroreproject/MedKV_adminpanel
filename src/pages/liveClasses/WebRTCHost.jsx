@@ -310,30 +310,54 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [recordingState]);
 
-  // Fetch initial recording status and set up timer
+  // Fetch initial recording status on mount
   useEffect(() => {
     const fetchStatus = async () => {
       try {
         const { getRecordingStatus } = await import('../../services/classRecordingService');
         const res = await getRecordingStatus(roomId);
         if (res.success && res.data) {
-          setRecordingState(res.data.recordingState);
-          setRecordingDuration(res.data.accumulatedDuration || 0);
+          const state = res.data.recordingState;
+          if (state === 'completed' || state === 'failed') {
+            setRecordingState('idle');
+            setRecordingDuration(0);
+          } else {
+            setRecordingState(state);
+            setRecordingDuration(res.data.accumulatedDuration || 0);
+          }
         }
       } catch (err) {}
     };
     fetchStatus();
   }, [roomId]);
 
+  // Handle active timers and processing polling
   useEffect(() => {
     let intervalId;
     if (recordingState === 'recording') {
+      // Local timer tick
       intervalId = setInterval(() => {
         setRecordingDuration(prev => prev + 1);
       }, 1000);
+    } else if (recordingState === 'processing') {
+      // Poll backend while processing
+      intervalId = setInterval(async () => {
+        try {
+          const { getRecordingStatus } = await import('../../services/classRecordingService');
+          const res = await getRecordingStatus(roomId);
+          if (res.success && res.data) {
+            const state = res.data.recordingState;
+            // If processing is done, reset to allow new recordings in the same class!
+            if (state === 'completed' || state === 'failed') {
+              setRecordingState('idle');
+              setRecordingDuration(0);
+            }
+          }
+        } catch (err) {}
+      }, 3000); // Check every 3 seconds
     }
     return () => clearInterval(intervalId);
-  }, [recordingState]);
+  }, [recordingState, roomId]);
 
   const formatTime = (secs) => {
     const hrs = Math.floor(secs / 3600);
