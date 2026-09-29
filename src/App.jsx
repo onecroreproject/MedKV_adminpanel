@@ -45,6 +45,7 @@ import ScheduleClass from './pages/liveClasses/ScheduleClass';
 import ClassDetails from './pages/liveClasses/ClassDetails';
 import LiveMonitor from './pages/liveClasses/LiveMonitor';
 import RecordingList from './pages/recordings/RecordingList';
+import ClassRecordingList from './pages/recordings/ClassRecordingList';
 import UploadRecording from './pages/recordings/UploadRecording';
 import RecordingDetails from './pages/recordings/RecordingDetails';
 import AnatomyList from './pages/anatomy/AnatomyList';
@@ -144,6 +145,7 @@ function App() {
           <Route path="recordings" element={<RecordingList />} />
           <Route path="recordings/upload" element={<UploadRecording />} />
           <Route path="recordings/:id" element={<RecordingDetails />} />
+          <Route path="class-recordings" element={<ClassRecordingList />} />
 
           {/* Anatomy Routes */}
           <Route path="anatomy" element={<AnatomyList />} />

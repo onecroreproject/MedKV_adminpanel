@@ -17,6 +17,7 @@ const menuItems = [
   { name: 'Courses', path: '/courses', icon: BookOpen },
   { name: 'Categories', path: '/categories', icon: FolderOpen },
   { name: 'Live Classes', path: '/live-classes', icon: Video },
+  { name: 'Class Recordings', path: '/class-recordings', icon: Video },
   { name: 'Recordings', path: '/recordings', icon: Film },
   // { name: 'Anatomy Module', path: '/anatomy', icon: Activity },
   // { name: 'Pathology Module', path: '/pathology', icon: Stethoscope },
