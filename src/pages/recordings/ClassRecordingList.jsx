@@ -1,335 +1,357 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Search, PlayCircle, Download, Edit, Trash2, X, FileVideo } from 'lucide-react';
+import {
+  Search, PlayCircle, Download, Edit, Trash2, X, FileVideo,
+  ChevronLeft, ChevronRight, RefreshCw, Loader2
+} from 'lucide-react';
 import api from '../../services/axiosInstance';
 import Badge from '../../components/common/Badge';
-import { getClassRecordings, deleteClassRecording, updateClassRecording } from '../../services/classRecordingService';
+import { updateClassRecording, deleteClassRecording } from '../../services/classRecordingService';
+
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'All Statuses' },
+  { value: 'recording', label: 'Recording' },
+  { value: 'paused', label: 'Paused' },
+  { value: 'processing', label: 'Processing' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'failed', label: 'Failed' },
+];
+
+const STATUS_BADGE = {
+  completed: 'success',
+  failed: 'danger',
+  recording: 'warning',
+  paused: 'warning',
+  processing: 'warning',
+  idle: 'default',
+};
+
+function formatSize(bytes) {
+  if (!bytes || bytes === 0) return '\u2014';
+  if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(2)} GB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
+function formatDuration(seconds) {
+  if (!seconds || seconds === 0) return '\u2014';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}h ${m.toString().padStart(2,'0')}m ${s.toString().padStart(2,'0')}s`;
+  return `${m}m ${s.toString().padStart(2,'0')}s`;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '\u2014';
+  return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
 
 export default function ClassRecordingList() {
   const [recordings, setRecordings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedVideo, setSelectedVideo] = useState(null);
-  const [videoBlobUrl, setVideoBlobUrl] = useState(null);
-  const [isVideoLoading, setIsVideoLoading] = useState(false);
-  const [editingVideo, setEditingVideo] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+  const LIMIT = 20;
+
+  // Player state â€” uses HTTP range streaming, no blob
+  const [playerRec, setPlayerRec] = useState(null);
+  const [playerError, setPlayerError] = useState('');
+
+  // Edit state
+  const [editingRec, setEditingRec] = useState(null);
+  const [editError, setEditError] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
+
   const [portalsReady, setPortalsReady] = useState(false);
 
-  const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api/v1', '') : 'http://localhost:5000';
+  const baseUrl = import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace('/api/v1', '')
+    : 'http://localhost:5000';
 
-  useEffect(() => {
-    setPortalsReady(true);
-    fetchRecordings();
-    return () => setPortalsReady(false);
-  }, []);
+  useEffect(() => { setPortalsReady(true); return () => setPortalsReady(false); }, []);
 
-  const fetchRecordings = async () => {
+  const fetchRecordings = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await getClassRecordings();
-      if (res.success) {
-        setRecordings(res.data);
-      }
+      setLoadError('');
+      const params = { page, limit: LIMIT };
+      if (searchQuery) params.search = searchQuery;
+      if (statusFilter) params.status = statusFilter;
+      const res = await api.get('/class-recordings', { params });
+      setRecordings(res.data.data || []);
+      if (res.data.pagination) setPagination(res.data.pagination);
     } catch (err) {
-      console.error('Failed to load class recordings', err);
+      setLoadError('Failed to load recordings. Please refresh.');
     } finally {
       setLoading(false);
+    }
+  }, [page, searchQuery, statusFilter]);
+
+  useEffect(() => {
+    const t = setTimeout(fetchRecordings, 300);
+    return () => clearTimeout(t);
+  }, [fetchRecordings]);
+
+  // Authenticated streaming URL â€” backend supports HTTP Range requests for seeking
+  const getStreamUrl = (id) => {
+    const token = localStorage.getItem('token');
+    return `${baseUrl}/api/v1/class-recordings/${id}/stream?token=${encodeURIComponent(token || '')}`;
+  };
+
+  const handlePlay = (rec) => {
+    if (rec.recordingState !== 'completed') return;
+    setPlayerRec(rec);
+    setPlayerError('');
+  };
+
+  const handleDownload = async (rec) => {
+    if (rec.recordingState !== 'completed') return;
+    try {
+      const response = await api.get(`/class-recordings/${rec._id}/download`, { responseType: 'blob' });
+      const blobUrl = URL.createObjectURL(response.data);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = rec.fileName || `${rec.title || 'recording'}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Download failed', err);
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this recording? This will also remove the file from the server.')) {
-      try {
-        await deleteClassRecording(id);
-        fetchRecordings();
-      } catch (err) {
-        console.error('Failed to delete', err);
-      }
+    if (!window.confirm('Delete this recording? This will permanently remove the file from the server.')) return;
+    try {
+      setDeletingId(id);
+      await deleteClassRecording(id);
+      fetchRecordings();
+    } catch (err) {
+      console.error('Delete failed', err);
+    } finally {
+      setDeletingId(null);
     }
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
-      await updateClassRecording(editingVideo._id, {
-        title: editingVideo.title,
-        description: editingVideo.description,
-      });
-      setEditingVideo(null);
+      setEditError('');
+      await updateClassRecording(editingRec._id, { title: editingRec.title, description: editingRec.description });
+      setEditingRec(null);
       fetchRecordings();
     } catch (err) {
-      console.error('Failed to update', err);
+      setEditError('Failed to save. Please try again.');
     }
   };
-
-  const handlePlay = async (rec) => {
-    try {
-      setIsVideoLoading(true);
-      setSelectedVideo(rec);
-      
-      const response = await api.get(`/class-recordings/${rec._id}/download`, {
-        responseType: 'blob'
-      });
-      
-      const blobUrl = URL.createObjectURL(response.data);
-      setVideoBlobUrl(blobUrl);
-    } catch (err) {
-      console.error('Failed to fetch video stream', err);
-      let errorMessage = 'Failed to load video. It may still be processing or unavailable.';
-      
-      if (err.response?.data instanceof Blob) {
-        try {
-          const text = await err.response.data.text();
-          const json = JSON.parse(text);
-          errorMessage = json.message || errorMessage;
-        } catch (e) {}
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      }
-      
-      alert(errorMessage);
-      setSelectedVideo(null);
-    } finally {
-      setIsVideoLoading(false);
-    }
-  };
-
-  const handleDownload = async (rec) => {
-    try {
-      const response = await api.get(`/class-recordings/${rec._id}/download`, {
-        responseType: 'blob'
-      });
-      
-      const blobUrl = URL.createObjectURL(response.data);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = rec.fileName || "class-recording.mp4";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      
-      URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-      console.error('Failed to download recording', err);
-      let errorMessage = 'Failed to download recording.';
-      
-      if (err.response?.data instanceof Blob) {
-        try {
-          const text = await err.response.data.text();
-          const json = JSON.parse(text);
-          errorMessage = json.message || errorMessage;
-        } catch (e) {}
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      }
-      
-      alert(errorMessage);
-    }
-  };
-
-  const closeVideoPlayer = () => {
-    if (videoBlobUrl) {
-      URL.revokeObjectURL(videoBlobUrl);
-      setVideoBlobUrl(null);
-    }
-    setSelectedVideo(null);
-  };
-
-  const formatSize = (bytes) => {
-    if (!bytes) return 'N/A';
-    const mb = bytes / (1024 * 1024);
-    return `${mb.toFixed(2)} MB`;
-  };
-
-  const formatDuration = (seconds) => {
-    if (!seconds) return 'N/A';
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h > 0 ? h + 'h ' : ''}${m}m ${s}s`;
-  };
-
-  const filteredRecordings = recordings.filter(rec => 
-    rec.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    rec.roomName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <div className="space-y-6">
-      {portalsReady && document.getElementById('topbar-title-portal') && createPortal(
-        <span>Class Recordings</span>,
-        document.getElementById('topbar-title-portal')
-      )}
+      {portalsReady && document.getElementById('topbar-title-portal') &&
+        createPortal(<span>Class Recordings</span>, document.getElementById('topbar-title-portal'))}
 
-      {portalsReady && document.getElementById('topbar-search-portal') && createPortal(
-        <div className="flex-1 min-w-[250px] w-full">
-          <div className="relative">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input 
-              type="text" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by Title or Room..." 
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary bg-gray-50"
-            />
-          </div>
-        </div>,
-        document.getElementById('topbar-search-portal')
+      {portalsReady && document.getElementById('topbar-search-portal') &&
+        createPortal(
+          <div className="flex items-center gap-3 flex-1 min-w-[250px]">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input type="text" value={searchQuery}
+                onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
+                placeholder="Search by title..."
+                className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary bg-gray-50"
+              />
+            </div>
+            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+              className="py-2 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:border-brand-primary">
+              {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <button onClick={fetchRecordings} className="p-2 text-gray-400 hover:text-brand-primary" title="Refresh">
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>,
+          document.getElementById('topbar-search-portal')
+        )}
+
+      {loadError && (
+        <div className="bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-lg text-sm">{loadError}</div>
       )}
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-text-main whitespace-nowrap">
+          <table className="w-full text-left text-sm text-text-main">
             <thead className="bg-gray-50 text-text-muted font-medium border-b border-gray-100">
               <tr>
-                <th className="px-6 py-4">Recording</th>
-                <th className="px-6 py-4">Class/Course</th>
-                <th className="px-6 py-4">Teacher</th>
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4">Duration</th>
-                <th className="px-6 py-4">File Size</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-5 py-4">Recording</th>
+                <th className="px-5 py-4">Host</th>
+                <th className="px-5 py-4">Date</th>
+                <th className="px-5 py-4">Duration</th>
+                <th className="px-5 py-4">Size</th>
+                <th className="px-5 py-4">Status</th>
+                <th className="px-5 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {loading ? (
-                <tr><td colSpan="8" className="px-6 py-4 text-center text-text-muted">Loading class recordings...</td></tr>
-              ) : filteredRecordings.length === 0 ? (
-                <tr><td colSpan="8" className="px-6 py-4 text-center text-text-muted">No recordings found</td></tr>
-              ) : filteredRecordings.map((rec) => (
-                <tr key={rec._id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 font-medium">
-                    {rec.title}
-                  </td>
-                  <td className="px-6 py-4">
-                    {rec.course?.title || rec.roomName || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4">
-                    {rec.teacher?.name || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4">
-                    {new Date(rec.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4">
-                    {formatDuration(rec.duration)}
-                  </td>
-                  <td className="px-6 py-4">
-                    {formatSize(rec.fileSize)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <Badge status={(rec.recordingState === 'completed' || rec.status === 'EGRESS_COMPLETE') ? 'success' : (rec.recordingState === 'failed' || rec.status === 'EGRESS_FAILED' ? 'danger' : 'warning')}>
-                      {rec.recordingState ? rec.recordingState.toUpperCase() : rec.status}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button 
-                        onClick={() => handlePlay(rec)} 
-                        className="p-1.5 hover:bg-blue-50 rounded-lg text-gray-400 hover:text-brand-primary transition-colors"
-                        title="View / Play"
-                        disabled={!(rec.recordingState === 'completed' || rec.status === 'EGRESS_COMPLETE') || isVideoLoading}
-                      >
-                        <PlayCircle className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => setEditingVideo(rec)} 
-                        className="p-1.5 hover:bg-yellow-50 rounded-lg text-gray-400 hover:text-yellow-600 transition-colors"
-                        title="Edit Details"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDownload(rec)} 
-                        className={`p-1.5 rounded-lg transition-colors ${!(rec.recordingState === 'completed' || rec.status === 'EGRESS_COMPLETE') ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-green-50 text-gray-400 hover:text-green-600'}`}
-                        title="Download MP4"
-                        disabled={!(rec.recordingState === 'completed' || rec.status === 'EGRESS_COMPLETE')}
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(rec._id)} 
-                        className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
-                        title="Delete Recording"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                <tr><td colSpan={7} className="px-5 py-12 text-center">
+                  <div className="flex flex-col items-center gap-2 text-text-muted">
+                    <Loader2 className="w-6 h-6 animate-spin text-brand-primary" />
+                    <span>Loading recordingsâ€¦</span>
+                  </div>
+                </td></tr>
+              ) : recordings.length === 0 ? (
+                <tr><td colSpan={7} className="px-5 py-12 text-center">
+                  <div className="flex flex-col items-center gap-2 text-text-muted">
+                    <FileVideo className="w-8 h-8 opacity-30" />
+                    <span>No recordings found</span>
+                  </div>
+                </td></tr>
+              ) : recordings.map(rec => {
+                const isComplete = rec.recordingState === 'completed';
+                const isProcessing = ['processing', 'recording', 'paused'].includes(rec.recordingState);
+                return (
+                  <tr key={rec._id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-5 py-4">
+                      <p className="font-medium text-text-main">{rec.title}</p>
+                      {rec.course?.title && <p className="text-xs text-text-muted mt-0.5">{rec.course.title}</p>}
+                    </td>
+                    <td className="px-5 py-4 text-text-muted whitespace-nowrap">{rec.teacher?.name || 'â€”'}</td>
+                    <td className="px-5 py-4 text-text-muted whitespace-nowrap">{formatDate(rec.startedAt || rec.createdAt)}</td>
+                    <td className="px-5 py-4 text-text-muted whitespace-nowrap">{formatDuration(rec.duration)}</td>
+                    <td className="px-5 py-4 text-text-muted whitespace-nowrap">{formatSize(rec.fileSize)}</td>
+                    <td className="px-5 py-4">
+                      <Badge status={STATUS_BADGE[rec.recordingState] || 'default'}>
+                        {isProcessing
+                          ? <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />{(rec.recordingState || '').charAt(0).toUpperCase() + (rec.recordingState || '').slice(1)}</span>
+                          : (rec.recordingState || 'idle').charAt(0).toUpperCase() + (rec.recordingState || 'idle').slice(1)
+                        }
+                      </Badge>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => handlePlay(rec)} disabled={!isComplete}
+                          title={isComplete ? 'Play' : 'Not available yet'}
+                          className={`p-1.5 rounded-lg transition-colors ${isComplete ? 'hover:bg-blue-50 text-gray-400 hover:text-brand-primary' : 'text-gray-200 cursor-not-allowed'}`}>
+                          <PlayCircle className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setEditingRec({ ...rec })} title="Edit"
+                          className="p-1.5 hover:bg-yellow-50 rounded-lg text-gray-400 hover:text-yellow-600 transition-colors">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDownload(rec)} disabled={!isComplete}
+                          title={isComplete ? 'Download MP4' : 'Not available yet'}
+                          className={`p-1.5 rounded-lg transition-colors ${isComplete ? 'hover:bg-green-50 text-gray-400 hover:text-green-600' : 'text-gray-200 cursor-not-allowed'}`}>
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDelete(rec._id)} disabled={deletingId === rec._id}
+                          title="Delete" className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
+                          {deletingId === rec._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 text-sm text-text-muted">
+            <span>Showing {((page - 1) * LIMIT) + 1}â€“{Math.min(page * LIMIT, pagination.total)} of {pagination.total}</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
+                className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span>Page {page} of {pagination.totalPages}</span>
+              <button onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))} disabled={page >= pagination.totalPages}
+                className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Video Player Modal */}
-      {selectedVideo && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 lg:pl-64">
+      {/* â”€â”€ Video Player Modal â€” uses HTTP range streaming for seek support â”€â”€ */}
+      {playerRec && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 lg:pl-64">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <h3 className="font-bold text-text-main">{selectedVideo.title}</h3>
-              <button 
-                onClick={closeVideoPlayer}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
+            <div className="flex items-start justify-between p-4 border-b border-gray-100">
+              <div>
+                <h3 className="font-bold text-text-main">{playerRec.title}</h3>
+                <div className="flex flex-wrap gap-4 mt-1 text-xs text-text-muted">
+                  {playerRec.teacher?.name && <span>Host: {playerRec.teacher.name}</span>}
+                  <span>{formatDate(playerRec.startedAt || playerRec.createdAt)}</span>
+                  {playerRec.duration > 0 && <span>Duration: {formatDuration(playerRec.duration)}</span>}
+                  {playerRec.fileSize > 0 && <span>Size: {formatSize(playerRec.fileSize)}</span>}
+                </div>
+              </div>
+              <button onClick={() => { setPlayerRec(null); setPlayerError(''); }} className="p-2 hover:bg-gray-100 rounded-lg ml-4">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <div className="aspect-video bg-black flex items-center justify-center relative w-full">
-              {isVideoLoading ? (
-                <div className="flex flex-col items-center justify-center text-white">
-                  <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mb-4" />
-                  <p>Loading Secure Video...</p>
+
+            <div className="aspect-video bg-black relative">
+              {playerError ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6">
+                  <FileVideo className="w-12 h-12 opacity-30 mb-3" />
+                  <p className="font-medium">Unable to play recording</p>
+                  <p className="text-sm opacity-60 mt-1">{playerError}</p>
                 </div>
-              ) : videoBlobUrl ? (
-                <video 
-                  controls 
-                  autoPlay 
-                  className="w-full h-full outline-none"
-                  src={videoBlobUrl}
-                >
+              ) : (
+                <video key={playerRec._id} controls autoPlay className="w-full h-full outline-none"
+                  onError={() => setPlayerError('Playback failed. The file may be unavailable or still processing.')}
+                  src={getStreamUrl(playerRec._id)}>
                   Your browser does not support the video tag.
                 </video>
-              ) : (
-                <p className="text-white">Video unavailable</p>
               )}
+            </div>
+
+            <div className="flex items-center justify-between p-4 border-t border-gray-100">
+              <button onClick={() => handleDownload(playerRec)}
+                className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium transition-colors">
+                <Download className="w-4 h-4" /> Download Recording
+              </button>
+              {playerRec.roomName && <span className="text-xs text-text-muted">Class ID: {playerRec.roomName.slice(-8)}</span>}
             </div>
           </div>
         </div>
       )}
 
-      {/* Edit Modal */}
-      {editingVideo && (
+      {/* â”€â”€ Edit Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {editingRec && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 lg:pl-64">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg">Edit Recording</h3>
-              <button onClick={() => setEditingVideo(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              <button onClick={() => { setEditingRec(null); setEditError(''); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
+            {editError && <p className="text-red-600 text-sm mb-3 bg-red-50 px-3 py-2 rounded-lg">{editError}</p>}
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                <input 
-                  type="text" 
-                  value={editingVideo.title || ''} 
-                  onChange={(e) => setEditingVideo({...editingVideo, title: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                  required
-                />
+                <input type="text" value={editingRec.title || ''}
+                  onChange={e => setEditingRec({ ...editingRec, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea 
-                  value={editingVideo.description || ''} 
-                  onChange={(e) => setEditingVideo({...editingVideo, description: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary min-h-[100px]"
-                ></textarea>
+                <textarea value={editingRec.description || ''}
+                  onChange={e => setEditingRec({ ...editingRec, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary min-h-[100px] resize-none" />
               </div>
               <div className="flex justify-end gap-3 mt-6">
-                <button type="button" onClick={() => setEditingVideo(null)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90">Save Changes</button>
+                <button type="button" onClick={() => { setEditingRec(null); setEditError(''); }} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 text-sm font-medium">Save Changes</button>
               </div>
             </form>
           </div>
@@ -338,3 +360,4 @@ export default function ClassRecordingList() {
     </div>
   );
 }
+
