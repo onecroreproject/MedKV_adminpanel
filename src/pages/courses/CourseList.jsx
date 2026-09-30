@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Download, MoreVertical, Search, Filter, BookOpen, Users, DollarSign, Edit, Trash2, Eye } from 'lucide-react';
 import Badge from '../../components/common/Badge';
-import { getCourses, deleteCourse } from '../../services/courseService';
+import { getCourses, deleteCourse, updateCourse } from '../../services/courseService';
 import { getCategories } from '../../services/categoryService';
 import { exportToCSV } from '../../utils/exportUtils';
 
@@ -60,6 +60,18 @@ export default function CourseList() {
       }
     }
   };
+
+  const handleStatusToggle = async (courseId, currentStatus) => {
+    const newStatus = currentStatus === 'Published' ? 'Draft' : 'Published';
+    try {
+      setCourses(prev => prev.map(c => c._id === courseId ? { ...c, status: newStatus } : c));
+      await updateCourse(courseId, { status: newStatus });
+    } catch (error) {
+      console.error('Failed to update course status:', error);
+      setCourses(prev => prev.map(c => c._id === courseId ? { ...c, status: currentStatus } : c));
+    }
+  };
+
 
 
   const filteredCourses = courses.filter(course => {
@@ -247,7 +259,24 @@ export default function CourseList() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <Badge status={getStatusColor(course.status)}>{course.status}</Badge>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleStatusToggle(course._id, course.status)}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            course.status === 'Published' ? 'bg-green-500' : 'bg-gray-300'
+                          }`}
+                          role="switch"
+                          aria-checked={course.status === 'Published'}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              course.status === 'Published' ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                        <Badge status={getStatusColor(course.status)}>{course.status}</Badge>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
