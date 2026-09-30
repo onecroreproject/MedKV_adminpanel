@@ -20,12 +20,16 @@ import {
   useIsSpeaking
 } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { Track, AudioPresets } from 'livekit-client';
+import { Track, AudioPresets, VideoPresets } from 'livekit-client';
 
 const LOW_LATENCY_OPTIONS = {
-  adaptiveStream: false,
+  adaptiveStream: true,
   dynacast: true,
   stopLocalTrackOnUnpublish: true,
+
+  videoCaptureDefaults: {
+    resolution: VideoPresets.h720.resolution,
+  },
   reconnectPolicy: {
     nextRetryDelayInMs: (context) => {
       if (context.retryCount === 0) return 300;
