@@ -108,7 +108,10 @@ export default function LiveClassList() {
       await updateLiveClass(session._id, { status: 'Live Now' });
       fetchSessions();
       if (session.meetingProvider === 'webrtc') {
-        window.open(`/webrtc-host/${session._id}`, '_blank');
+        const classroomBase = import.meta.env.VITE_CLASSROOM_URL || 'http://localhost:5173';
+        const token = localStorage.getItem('token');
+        const url = `${classroomBase}/classroom/${session._id}${token ? `?_t=${encodeURIComponent(token)}` : ''}`;
+        window.open(url, '_blank');
       } else if (session.zoomLink) {
         const url = extractUrl(session.zoomLink);
         if (url) {
@@ -399,7 +402,10 @@ export default function LiveClassList() {
                               <button 
                                 onClick={(e) => { 
                                   if (session.meetingProvider === 'webrtc') {
-                                    window.open(`/webrtc-host/${session._id}`, '_blank');
+                                    const classroomBase = import.meta.env.VITE_CLASSROOM_URL || 'http://localhost:5173';
+                                    const token = localStorage.getItem('token');
+                                    const url = `${classroomBase}/classroom/${session._id}${token ? `?_t=${encodeURIComponent(token)}` : ''}`;
+                                    window.open(url, '_blank');
                                   } else {
                                     if(!session.zoomLink) { e.preventDefault(); alert('No Zoom link provided'); } 
                                     else { window.open(extractUrl(session.zoomLink), '_blank'); }

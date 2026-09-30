@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/dashboard/Dashboard';
 import FacultyLayout from './layouts/FacultyLayout';
@@ -93,15 +93,34 @@ import SEOEditor from './pages/seo/SEOEditor';
 import DeveloperConsole from './pages/developer/DeveloperConsole';
 
 import ProtectedRoute from './components/common/ProtectedRoute';
-import WebRTCHost from './pages/liveClasses/WebRTCHost';
-import WebRTCHostMock from './pages/liveClasses/WebRTCHostMock';
+
+// Redirect host to the student-facing fe classroom — the new canonical classroom
+const CLASSROOM_BASE = import.meta.env.VITE_CLASSROOM_URL || 'http://localhost:5173';
+
+function HostClassroomRedirect() {
+  const { roomId } = useParams();
+  // Fire-and-forget: replace current tab with the fe classroom entry page
+  // Pass the admin JWT token as _t query param so the fe app can authenticate
+  // cross-origin in dev (in production both apps share the same domain/origin)
+  React.useEffect(() => {
+    if (roomId) {
+      const token = localStorage.getItem('token');
+      const url = `${CLASSROOM_BASE}/classroom/${roomId}${token ? `?_t=${encodeURIComponent(token)}` : ''}`;
+      window.location.href = url;
+    }
+  }, [roomId]);
+  return (
+    <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'system-ui' }}>
+      <p>Redirecting to classroom...</p>
+    </div>
+  );
+}
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/webrtc-host/:roomId" element={<ProtectedRoute role="admin"><WebRTCHost /></ProtectedRoute>} />
-        <Route path="/hostlive" element={<WebRTCHostMock />} />
+        <Route path="/webrtc-host/:roomId" element={<ProtectedRoute role="admin"><HostClassroomRedirect /></ProtectedRoute>} />
         {/* Public Auth Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/register" element={<AdminRegister />} />

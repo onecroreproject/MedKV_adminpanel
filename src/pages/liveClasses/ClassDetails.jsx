@@ -126,7 +126,10 @@ export default function ClassDetails() {
       await updateLiveClass(id, { status: 'Live Now' });
       fetchSession();
       if (session.meetingProvider === 'webrtc') {
-        window.open(`/webrtc-host/${id}`, '_blank');
+        const classroomBase = import.meta.env.VITE_CLASSROOM_URL || 'http://localhost:5173';
+        const token = localStorage.getItem('token');
+        const url = `${classroomBase}/classroom/${id}${token ? `?_t=${encodeURIComponent(token)}` : ''}`;
+        window.open(url, '_blank');
       } else if (session.zoomLink) {
         const url = extractUrl(session.zoomLink);
         if (url) {
