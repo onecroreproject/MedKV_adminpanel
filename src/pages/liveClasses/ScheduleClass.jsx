@@ -30,12 +30,12 @@ export default function ScheduleClass() {
   const selectedModuleId = watch("courseModule");
   const accessControlVal = watch("accessControl") || 'course';
 
-  // Unverify when link changes
+  // Unverify when link changes (removed manual verification)
   useEffect(() => {
-    if (!isEditMode || existingSession?.zoomLink !== zoomLinkValue) {
-      setIsLinkVerified(false);
+    if (!isEditMode) {
+      setIsLinkVerified(true);
     }
-  }, [zoomLinkValue, isEditMode, existingSession]);
+  }, [isEditMode]);
 
   useEffect(() => {
     if (selectedCourseId) {
@@ -125,10 +125,6 @@ export default function ScheduleClass() {
   }, [id, reset]);
 
   const onSubmit = async (data) => {
-    if (data.meetingProvider === 'zoom' && !isLinkVerified) {
-      alert("Please verify the Zoom link first before scheduling.");
-      return;
-    }
 
     if (data.accessControl === 'course') {
       if (!data.course || !data.courseModule) {
@@ -366,42 +362,20 @@ export default function ScheduleClass() {
               </div>
               
               {watch("meetingProvider") === 'zoom' && (
-                <>
+                <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4 flex gap-3 mt-4">
+                  <Video className="w-5 h-5 text-blue-600 shrink-0" />
                   <div>
-                    <label className="block text-sm font-medium text-text-main mb-1.5">Zoom Meeting Link *</label>
-                    <input {...register("zoomLink")} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20" placeholder="https://us02web.zoom.us/j/..." />
+                    <h4 className="text-sm font-bold text-blue-800">Auto-Generate Zoom Meeting</h4>
+                    <p className="text-sm text-blue-700 mt-1">A new Zoom meeting will be automatically created and assigned to the selected Faculty once you save this session.</p>
+                    {isEditMode && existingSession?.zoomId && (
+                      <div className="mt-3 p-3 bg-white rounded border border-blue-100 text-sm">
+                        <p><span className="font-semibold">Meeting ID:</span> {existingSession.zoomId}</p>
+                        <p><span className="font-semibold">Passcode:</span> {existingSession.zoomPasscode}</p>
+                        <p className="mt-1"><a href={existingSession.zoomLink} target="_blank" rel="noreferrer" className="text-brand-primary hover:underline font-medium">View Join Link</a></p>
+                      </div>
+                    )}
                   </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-text-main mb-1.5">Meeting ID</label>
-                  <input {...register("zoomId")} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20" placeholder="e.g. 123 456 7890" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-main mb-1.5">Passcode</label>
-                  <input {...register("zoomPasscode")} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20" placeholder="Enter Passcode" />
-                </div>
-              </div>
-              <button 
-                type="button" 
-                onClick={verifyZoomLink}
-                disabled={!zoomLinkValue || isVerifying || isLinkVerified}
-                className={`w-full py-2 border rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                  isLinkVerified
-                    ? 'border-emerald-500 text-emerald-600 bg-emerald-50 cursor-default'
-                    : !zoomLinkValue 
-                    ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
-                    : 'border-brand-primary text-brand-primary hover:bg-brand-primary/5 bg-white'
-                }`}
-              >
-                {isVerifying ? (
-                  <><span className="w-4 h-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></span> Verifying...</>
-                ) : isLinkVerified ? (
-                  <><CheckCircle className="w-4 h-4" /> Link Verified</>
-                ) : (
-                  'Verify Zoom Link'
-                )}
-              </button>
-              </>
               )}
             </div>
           </div>
