@@ -5,7 +5,7 @@ import { ArrowLeft, Save, X, Video, Upload, Link as LinkIcon, Settings, Shield, 
 import { getCourses, getCourseById } from '../../services/courseService';
 import { getFaculty } from '../../services/facultyService';
 import { getLiveClasses } from '../../services/liveClassService';
-import { createRecording } from '../../services/recordingService';
+import { createRecording, uploadRecordingFile } from '../../services/recordingService';
 
 export default function UploadRecording() {
   const navigate = useNavigate();
@@ -16,6 +16,8 @@ export default function UploadRecording() {
   const [modules, setModules] = useState([]);
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const selectedCourseId = watch("course");
   const selectedModuleId = watch("courseModule");
 
@@ -68,27 +70,51 @@ export default function UploadRecording() {
   const onSubmit = async (data) => {
     try {
       setLoading(true);
-      const res = await createRecording({
-        title: data.title,
-        description: data.description,
-        course: data.course || undefined,
-        courseModule: data.courseModule || undefined,
-        lesson: data.lesson || undefined,
-        liveClass: data.liveClass || undefined,
-        faculty: data.faculty || undefined,
-        videoUrl: data.videoUrl,
-        duration: data.duration ? `${data.duration}m` : undefined,
-        isPublished: true
-      });
-      if (res.success) {
-        alert('Recording uploaded successfully!');
-        navigate('/recordings');
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('video', selectedFile);
+        formData.append('title', data.title);
+        if (data.description) formData.append('description', data.description);
+        if (data.course) formData.append('course', data.course);
+        if (data.courseModule) formData.append('courseModule', data.courseModule);
+        if (data.lesson) formData.append('lesson', data.lesson);
+        if (data.liveClass) formData.append('liveClass', data.liveClass);
+        if (data.faculty) formData.append('faculty', data.faculty);
+        if (data.duration) formData.append('duration', data.duration);
+
+        const res = await uploadRecordingFile(formData, (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        });
+        
+        if (res.success) {
+          alert('Recording uploaded successfully!');
+          navigate('/recordings');
+        }
+      } else {
+        const res = await createRecording({
+          title: data.title,
+          description: data.description,
+          course: data.course || undefined,
+          courseModule: data.courseModule || undefined,
+          lesson: data.lesson || undefined,
+          liveClass: data.liveClass || undefined,
+          faculty: data.faculty || undefined,
+          videoUrl: data.videoUrl,
+          duration: data.duration ? `${data.duration}m` : undefined,
+          isPublished: true
+        });
+        if (res.success) {
+          alert('Recording uploaded successfully!');
+          navigate('/recordings');
+        }
       }
     } catch (err) {
       console.error(err);
       alert('Failed to upload recording');
     } finally {
       setLoading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -119,7 +145,7 @@ export default function UploadRecording() {
             disabled={loading}
             className="px-6 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium hover:bg-brand-primary/90 flex items-center gap-2 shadow-sm shadow-brand-primary/30 disabled:opacity-50"
           >
-            <Save className="w-4 h-4 text-brand-accent" /> {loading ? 'Publishing...' : 'Publish Recording'}
+            <Save className="w-4 h-4 text-brand-accent" /> {loading ? (uploadProgress > 0 ? `Uploading ${uploadProgress}%...` : 'Publishing...') : 'Publish Recording'}
           </button>
         </div>
       </div>
@@ -214,15 +240,45 @@ export default function UploadRecording() {
             {/* File Upload */}
             <div>
               <label className="block text-sm font-medium text-text-main mb-2">Direct File Upload</label>
-              <div className="w-full h-48 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-100 hover:border-brand-primary cursor-pointer transition-colors group">
-                <Upload className="w-8 h-8 mb-3 group-hover:text-brand-primary transition-colors" />
-                <span className="text-sm font-medium text-text-main">Drag & Drop Video Here</span>
-                <span className="text-xs mt-1">or click to browse from computer</span>
-                <div className="mt-4 flex gap-2 text-[10px] uppercase font-bold tracking-wider text-gray-400">
-                  <span className="bg-gray-200 px-1.5 py-0.5 rounded">MP4</span>
-                  <span className="bg-gray-200 px-1.5 py-0.5 rounded">MOV</span>
-                  <span className="bg-gray-200 px-1.5 py-0.5 rounded">MKV</span>
-                </div>
+              <div 
+                onClick={() => document.getElementById('video-upload').click()}
+                className="w-full h-48 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-100 hover:border-brand-primary cursor-pointer transition-colors group relative"
+              >
+                <input 
+                  type="file" 
+                  id="video-upload" 
+                  accept="video/mp4,video/x-m4v,video/*" 
+                  className="hidden" 
+                  onChange={(e) => {
+                    if(e.target.files && e.target.files[0]) {
+                      setSelectedFile(e.target.files[0]);
+                    }
+                  }} 
+                />
+                {!selectedFile ? (
+                  <>
+                    <Upload className="w-8 h-8 mb-3 group-hover:text-brand-primary transition-colors" />
+                    <span className="text-sm font-medium text-text-main">Drag & Drop Video Here</span>
+                    <span className="text-xs mt-1">or click to browse from computer</span>
+                    <div className="mt-4 flex gap-2 text-[10px] uppercase font-bold tracking-wider text-gray-400">
+                      <span className="bg-gray-200 px-1.5 py-0.5 rounded">MP4</span>
+                      <span className="bg-gray-200 px-1.5 py-0.5 rounded">MOV</span>
+                      <span className="bg-gray-200 px-1.5 py-0.5 rounded">MKV</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <Video className="w-8 h-8 mb-2 text-brand-primary" />
+                    <span className="text-sm font-medium text-text-main text-center max-w-[200px] truncate">{selectedFile.name}</span>
+                    <span className="text-xs mt-1">{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</span>
+                    {uploadProgress > 0 && uploadProgress < 100 && (
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 mt-4 max-w-[200px]">
+                        <div className="bg-brand-primary h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>
+                      </div>
+                    )}
+                    <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }} className="mt-3 text-xs text-red-500 hover:underline">Remove File</button>
+                  </div>
+                )}
               </div>
             </div>
 
