@@ -70,15 +70,16 @@ export default function UploadRecording() {
   const onSubmit = async (data) => {
     try {
       setLoading(true);
+      const generatedTitle = selectedFile ? selectedFile.name : (data.videoUrl ? 'External Video' : `New Recording - ${new Date().toLocaleDateString()}`);
+
       if (selectedFile) {
         const formData = new FormData();
         formData.append('video', selectedFile);
-        formData.append('title', data.title);
+        formData.append('title', generatedTitle);
         if (data.description) formData.append('description', data.description);
         if (data.course) formData.append('course', data.course);
         if (data.courseModule) formData.append('courseModule', data.courseModule);
         if (data.lesson) formData.append('lesson', data.lesson);
-        if (data.liveClass) formData.append('liveClass', data.liveClass);
         if (data.faculty) formData.append('faculty', data.faculty);
         if (data.duration) formData.append('duration', data.duration);
 
@@ -93,12 +94,11 @@ export default function UploadRecording() {
         }
       } else {
         const res = await createRecording({
-          title: data.title,
+          title: generatedTitle,
           description: data.description,
           course: data.course || undefined,
           courseModule: data.courseModule || undefined,
           lesson: data.lesson || undefined,
-          liveClass: data.liveClass || undefined,
           faculty: data.faculty || undefined,
           videoUrl: data.videoUrl,
           duration: data.duration ? `${data.duration}m` : undefined,
@@ -159,10 +159,7 @@ export default function UploadRecording() {
             <h3 className="font-bold text-text-main">1. Basic Information</h3>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-text-main mb-1.5">Session Title *</label>
-              <input {...register("title")} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20" placeholder="e.g. Brain MRI Interpretation Session" />
-            </div>
+            {/* Session Title removed */}
             <div>
               <label className="block text-sm font-medium text-text-main mb-1.5">Course Selection *</label>
               <select {...register("course", { required: true })} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20">
@@ -197,15 +194,7 @@ export default function UploadRecording() {
                 </select>
               </div>
             )}
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-1.5 flex items-center gap-1.5"><Video className="w-3.5 h-3.5" /> Attach to Live Class</label>
-              <select {...register("liveClass")} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20">
-                <option value="">Select Live Class (Optional)</option>
-                {liveClasses.map(lc => (
-                  <option key={lc._id} value={lc._id}>{lc.title}</option>
-                ))}
-              </select>
-            </div>
+            {/* Attach to Live Class removed */}
             
             <div>
               <label className="block text-sm font-medium text-text-main mb-1.5">Faculty Selection *</label>
