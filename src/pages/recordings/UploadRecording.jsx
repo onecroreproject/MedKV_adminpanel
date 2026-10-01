@@ -70,7 +70,13 @@ export default function UploadRecording() {
   const onSubmit = async (data) => {
     try {
       setLoading(true);
-      const generatedTitle = selectedFile ? selectedFile.name : (data.videoUrl ? 'External Video' : `New Recording - ${new Date().toLocaleDateString()}`);
+      let courseTitle = 'New Recording';
+      if (data.course) {
+        const selectedCourse = courses.find(c => c._id === data.course);
+        if (selectedCourse) courseTitle = selectedCourse.title;
+      }
+      
+      const generatedTitle = `${courseTitle} - ${new Date().toLocaleDateString()}`;
 
       if (selectedFile) {
         const formData = new FormData();
