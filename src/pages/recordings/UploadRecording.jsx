@@ -68,6 +68,13 @@ export default function UploadRecording() {
   }, []);
 
   const onSubmit = async (data) => {
+    if (data.access === 'course') {
+      if (!data.course || !data.courseModule) {
+        alert("Course and Module details are mandatory when selecting 'Course Students Only'.");
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       let courseTitle = 'New Recording';
