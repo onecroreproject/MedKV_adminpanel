@@ -109,7 +109,7 @@ export default function LiveClassList() {
       fetchSessions();
       const classroomBase = import.meta.env.VITE_CLASSROOM_URL || 'http://localhost:5173';
       const token = localStorage.getItem('token');
-      const url = `${classroomBase}/classroom/${session._id}${token ? `?_t=${encodeURIComponent(token)}` : ''}`;
+      const url = `${classroomBase}/classroom/${session._id}`;
       window.open(url, '_blank');
     } catch (error) {
       console.error('Failed to start session', error);
@@ -402,7 +402,7 @@ export default function LiveClassList() {
                                 onClick={(e) => { 
                                   const classroomBase = import.meta.env.VITE_CLASSROOM_URL || 'http://localhost:5173';
                                   const token = localStorage.getItem('token');
-                                  const url = `${classroomBase}/classroom/${session._id}${token ? `?_t=${encodeURIComponent(token)}` : ''}`;
+                                  const url = `${classroomBase}/classroom/${session._id}`;
                                   window.open(url, '_blank');
                                 }} 
                                 className="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition-colors">

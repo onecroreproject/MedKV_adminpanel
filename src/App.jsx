@@ -105,7 +105,7 @@ function HostClassroomRedirect() {
   React.useEffect(() => {
     if (roomId) {
       const token = localStorage.getItem('token');
-      const url = `${CLASSROOM_BASE}/classroom/${roomId}${token ? `?_t=${encodeURIComponent(token)}` : ''}`;
+      const url = `${CLASSROOM_BASE}/classroom/${roomId}`;
       window.location.href = url;
     }
   }, [roomId]);

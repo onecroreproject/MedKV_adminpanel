@@ -128,7 +128,7 @@ export default function ClassDetails() {
       if (session.meetingProvider === 'webrtc') {
         const classroomBase = import.meta.env.VITE_CLASSROOM_URL || 'http://localhost:5173';
         const token = localStorage.getItem('token');
-        const url = `${classroomBase}/classroom/${id}${token ? `?_t=${encodeURIComponent(token)}` : ''}`;
+        const url = `${classroomBase}/classroom/${id}`;
         window.open(url, '_blank');
       } else if (session.zoomLink) {
         const url = extractUrl(session.zoomLink);
