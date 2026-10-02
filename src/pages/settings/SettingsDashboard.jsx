@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Globe, Phone, Share2, Shield, History, Upload, Save, CheckCircle, Activity, Users, AlertCircle, Clock, Lock, FileText, Image, Trash2 } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Settings, Globe, Phone, Share2, Shield, History, Upload, Save, CheckCircle, Activity, Users, AlertCircle, Clock, Lock, FileText, Image, Trash2, Video } from 'lucide-react';
 import SecuritySettings from './SecuritySettings';
 import { getSettings, updateSettings } from '../../services/settingsService';
 import { uploadFile } from '../../services/uploadService';
+import axiosInstance from '../../services/axiosInstance';
 import default_icon_logo from '../../assets/logos/dark_logo_transparent.png';
 import default_name_logo from '../../assets/logos/company_name_transparent.png';
 import { createPortal } from 'react-dom';
 
 export default function SettingsDashboard() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('general');
   const [settings, setSettings] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,7 +25,12 @@ export default function SettingsDashboard() {
 
   useEffect(() => {
     fetchSettings();
-  }, []);
+    const params = new URLSearchParams(location.search);
+    if (params.get('zoom_auth') === 'success') {
+      alert('Zoom Re-authorization Successful!');
+      navigate('/settings', { replace: true });
+    }
+  }, [location, navigate]);
 
   const fetchSettings = async () => {
     try {
@@ -131,9 +140,24 @@ export default function SettingsDashboard() {
     setSettings(prev => ({ ...prev, banners: newBanners }));
   };
 
+  const handleZoomReconnect = async () => {
+    try {
+      const res = await axiosInstance.get('/zoom/oauth/authorize');
+      if (res.data.success && res.data.url) {
+        window.location.href = res.data.url;
+      } else {
+        alert('Failed to fetch Zoom OAuth URL');
+      }
+    } catch (err) {
+      console.error('Zoom reconnect error:', err);
+      alert('Failed to connect to Zoom. See console.');
+    }
+  };
+
   const tabs = [
     { id: 'general', label: 'General Settings', icon: Globe },
     { id: 'banners', label: 'Frontend Banners', icon: Image },
+    { id: 'integrations', label: 'Integrations', icon: Video },
     { id: 'contact', label: 'Contact Info', icon: Phone },
     { id: 'social', label: 'Social Media', icon: Share2 },
     { id: 'security', label: 'Content Security', icon: Lock },
@@ -665,6 +689,27 @@ export default function SettingsDashboard() {
                  <button onClick={() => handleSave('policies')} disabled={isSaving} className="flex items-center gap-2 px-6 py-2.5 bg-brand-primary text-white rounded-lg text-sm font-bold hover:bg-brand-primary/90 shadow-sm transition-colors disabled:opacity-50">
                    <Save className="w-4 h-4" /> {isSaving ? 'Saving...' : 'Save Policies'}
                  </button>
+              </div>
+            </div>
+          )}
+
+          {/* Integrations Tab */}
+          {activeTab === 'integrations' && (
+            <div className="space-y-6 animate-fade-in">
+              <h2 className="text-xl font-bold text-text-main border-b border-gray-100 pb-4">Integrations</h2>
+              <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-text-main">Zoom Video Conferencing</h3>
+                    <p className="text-sm text-text-muted mt-1">Connect your Academy Zoom account to automatically manage Live Classes, recordings, and attendance.</p>
+                  </div>
+                  <button 
+                    onClick={handleZoomReconnect} 
+                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm transition-colors"
+                  >
+                    <Video className="w-4 h-4" /> Reconnect Zoom
+                  </button>
+                </div>
               </div>
             </div>
           )}
