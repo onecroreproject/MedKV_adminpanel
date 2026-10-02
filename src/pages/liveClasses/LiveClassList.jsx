@@ -107,31 +107,30 @@ export default function LiveClassList() {
     try {
       await updateLiveClass(session._id, { status: 'Live Now' });
       fetchSessions();
-      if (session.meetingProvider === 'webrtc') {
-        const classroomBase = import.meta.env.VITE_CLASSROOM_URL || 'http://localhost:5173';
-        const token = localStorage.getItem('token');
-        const url = `${classroomBase}/classroom/${session._id}${token ? `?_t=${encodeURIComponent(token)}` : ''}`;
-        window.open(url, '_blank');
-      } else if (session.zoomLink) {
-        const url = extractUrl(session.zoomLink);
-        if (url) {
-          window.open(url, '_blank');
-        } else {
-          alert('Could not extract a valid URL from the Zoom link text.');
-        }
-      } else {
-        alert('No Zoom link available for this session.');
-      }
+      const classroomBase = import.meta.env.VITE_CLASSROOM_URL || 'http://localhost:5173';
+      const token = localStorage.getItem('token');
+      const url = `${classroomBase}/classroom/${session._id}${token ? `?_t=${encodeURIComponent(token)}` : ''}`;
+      window.open(url, '_blank');
     } catch (error) {
       console.error('Failed to start session', error);
       alert('Failed to start session. Please try again.');
     }
   };
 
-  const handleEndSession = async (sessionId) => {
+  const handleEndSession = async (session) => {
     if (window.confirm("Are you sure you want to end this live session?")) {
       try {
-        await updateLiveClass(sessionId, { status: 'Completed' });
+        if (session.meetingProvider === 'zoom') {
+          // Explicitly call the backend to end the Zoom meeting
+          const token = localStorage.getItem('token');
+          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/zoom/end-meeting/${session._id}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+        } else {
+          // WebRTC
+          await updateLiveClass(session._id, { status: 'Completed' });
+        }
         fetchSessions();
       } catch (err) {
         console.error('Failed to end session', err);
@@ -401,20 +400,15 @@ export default function LiveClassList() {
                             <>
                               <button 
                                 onClick={(e) => { 
-                                  if (session.meetingProvider === 'webrtc') {
-                                    const classroomBase = import.meta.env.VITE_CLASSROOM_URL || 'http://localhost:5173';
-                                    const token = localStorage.getItem('token');
-                                    const url = `${classroomBase}/classroom/${session._id}${token ? `?_t=${encodeURIComponent(token)}` : ''}`;
-                                    window.open(url, '_blank');
-                                  } else {
-                                    if(!session.zoomLink) { e.preventDefault(); alert('No Zoom link provided'); } 
-                                    else { window.open(extractUrl(session.zoomLink), '_blank'); }
-                                  }
+                                  const classroomBase = import.meta.env.VITE_CLASSROOM_URL || 'http://localhost:5173';
+                                  const token = localStorage.getItem('token');
+                                  const url = `${classroomBase}/classroom/${session._id}${token ? `?_t=${encodeURIComponent(token)}` : ''}`;
+                                  window.open(url, '_blank');
                                 }} 
                                 className="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition-colors">
                                 Join Now
                               </button>
-                              <button onClick={() => handleEndSession(session._id)} className="px-3 py-1.5 border border-red-200 text-red-600 bg-red-50 rounded text-xs font-medium hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer">
+                              <button onClick={() => handleEndSession(session)} className="px-3 py-1.5 border border-red-200 text-red-600 bg-red-50 rounded text-xs font-medium hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer">
                                 End
                               </button>
                             </>
