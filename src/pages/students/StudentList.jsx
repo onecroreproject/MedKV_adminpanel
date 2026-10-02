@@ -5,6 +5,7 @@ import Badge from '../../components/common/Badge';
 import { getStudents, deleteStudent } from '../../services/studentService';
 import { getCourses } from '../../services/courseService';
 import { exportToCSV } from '../../utils/exportUtils';
+import Pagination from '../../components/common/Pagination';
 import { createPortal } from 'react-dom';
 
 export default function StudentList() {
@@ -21,6 +22,9 @@ export default function StudentList() {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [portalsReady, setPortalsReady] = useState(false);
   const dropdownRef = useRef(null);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -92,6 +96,13 @@ export default function StudentList() {
     
     return matchesSearch && matchesStatus && matchesCourse && matchesStartDate && matchesEndDate;
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, courseFilter, startDate, endDate]);
+
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const paginatedStudents = filteredStudents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const toggleDropdown = (id, e) => {
     e.stopPropagation();
@@ -248,7 +259,7 @@ export default function StudentList() {
                   </td>
                 </tr>
               ) : (
-                filteredStudents.map((student) => (
+                paginatedStudents.map((student) => (
                   <tr key={student._id} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-6 py-4">
                       <input type="checkbox" className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
@@ -341,16 +352,13 @@ export default function StudentList() {
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between mt-6">
-          <p className="text-sm text-text-muted">Showing 1 to {filteredStudents.length} of {students.length} entries</p>
-          <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-text-muted hover:bg-gray-50 disabled:opacity-50" disabled>Previous</button>
-            <button className="px-3 py-1.5 bg-brand-primary text-white rounded-lg text-sm font-medium">1</button>
-            <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-text-main hover:bg-gray-50">2</button>
-            <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-text-main hover:bg-gray-50">3</button>
-            <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-text-main hover:bg-gray-50">Next</button>
-          </div>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          itemsPerPage={itemsPerPage}
+          totalItems={filteredStudents.length}
+        />
       </div>
     </div>
   );

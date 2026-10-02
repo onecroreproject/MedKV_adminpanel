@@ -6,6 +6,7 @@ import Badge from '../../components/common/Badge';
 import ImportModal from '../../components/common/ImportModal';
 import { getRecordings, deleteRecording } from '../../services/recordingService';
 import { exportToCSV } from '../../utils/exportUtils';
+import Pagination from '../../components/common/Pagination';
 
 export default function RecordingList() {
   const navigate = useNavigate();
@@ -18,6 +19,9 @@ export default function RecordingList() {
   const [courseFilter, setCourseFilter] = useState('');
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api/v1', '') : 'http://localhost:5000';
 
@@ -72,6 +76,13 @@ export default function RecordingList() {
     const matchesCourse = courseFilter ? rec.course?._id === courseFilter : true;
     return matchesSearch && matchesStatus && matchesCourse;
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, courseFilter]);
+
+  const totalPages = Math.ceil(filteredRecordings.length / itemsPerPage);
+  const paginatedRecordings = filteredRecordings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleExport = () => {
     const headers = [
@@ -210,7 +221,7 @@ export default function RecordingList() {
                   <tr><td colSpan="7" className="px-6 py-4 text-center text-text-muted">Loading recordings...</td></tr>
                 ) : filteredRecordings.length === 0 ? (
                   <tr><td colSpan="7" className="px-6 py-4 text-center text-text-muted">No recordings found</td></tr>
-                ) : filteredRecordings.map((rec) => (
+                ) : paginatedRecordings.map((rec) => (
                   <tr key={rec._id} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-6 py-4">
                       <input type="checkbox" className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
@@ -301,7 +312,7 @@ export default function RecordingList() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {loading ? (
             <div className="col-span-full text-center py-10 text-text-muted">Loading recordings...</div>
-          ) : filteredRecordings.map((rec) => (
+          ) : paginatedRecordings.map((rec) => (
             <div key={rec._id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all group cursor-pointer" onClick={() => navigate(`/recordings/${rec._id}`)}>
               {/* Thumbnail Area */}
               <div className="relative aspect-video bg-gray-100 border-b border-gray-100 flex items-center justify-center">
@@ -334,6 +345,16 @@ export default function RecordingList() {
           ))}
         </div>
       )}
+
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mt-4">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          itemsPerPage={itemsPerPage}
+          totalItems={filteredRecordings.length}
+        />
+      </div>
 
       {/* Video Player Modal */}
       {selectedVideo && (

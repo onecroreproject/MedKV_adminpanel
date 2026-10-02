@@ -150,14 +150,23 @@ export default function WebRTCHost() {
   const [preJoinChoices, setPreJoinChoices] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
-  const handlePreJoinSubmit = async (choices) => {
-    setPreJoinChoices(choices);
-    setIsConnecting(true); // Triggers unmount of PreJoin
+  useEffect(() => {
+    // Refresh Reconnect Logic
+    if (sessionStorage.getItem('activeWebRTCRoom') === roomId) {
+      console.log('Detected active room session, auto-reconnecting...');
+      handlePreJoinSubmit({
+        username: user.name,
+        videoEnabled: true,
+        audioEnabled: true
+      }, true);
+    }
+  }, [roomId, user.name]);
 
-    // 1. Unmount PreJoin to release the hardware camera lock.
-    // 2. Wait 800ms for the browser to actually let go of the USB/built-in camera.
-    // 3. Then fetch the token and mount LiveKitRoom to grab it again cleanly.
-    setTimeout(async () => {
+  const handlePreJoinSubmit = async (choices, isAutoReconnect = false) => {
+    setPreJoinChoices(choices);
+    setIsConnecting(true); 
+
+    const connectAndFetchToken = async () => {
       try {
         const response = await axios.post(`${import.meta.env.VITE_API_URL}/live-classes/token/livekit`, {
           roomId,
@@ -170,6 +179,7 @@ export default function WebRTCHost() {
         setToken(response.data.token);
         setHasJoined(true);
         setIsConnecting(false);
+        sessionStorage.setItem('activeWebRTCRoom', roomId); // Store for refresh
 
       } catch (err) {
         console.error('Failed to get token', err);
@@ -177,7 +187,13 @@ export default function WebRTCHost() {
         alert(`Connection failed: ${backendMessage}`);
         setIsConnecting(false);
       }
-    }, 800);
+    };
+
+    if (isAutoReconnect) {
+      connectAndFetchToken();
+    } else {
+      setTimeout(connectAndFetchToken, 800);
+    }
   };
 
   if (!hasJoined || !token) {
@@ -254,8 +270,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   ]);
 
   const participants = useParticipants();
-  // Fetch ALL tracks so the host can see students who turn on their camera
-  const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare], { onlySubscribed: false });
+  const screenTracks = useTracks([Track.Source.ScreenShare]);
   const { send: sendChatMessage, chatMessages } = useChat();
 
   const [chatOpen, setChatOpen] = useState(true);
@@ -581,6 +596,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
 
   const leaveRoom = () => {
     webrtcService.endClass();
+    sessionStorage.removeItem('activeWebRTCRoom');
     window.close();
     setTimeout(() => navigate(-1), 300);
   };
@@ -648,8 +664,8 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
   };
 
   // Find local screen share or camera
-  const localScreenTrack = tracks.find(t => t.participant.isLocal && t.source === Track.Source.ScreenShare);
-  const localCameraTrack = tracks.find(t => t.participant.isLocal && t.source === Track.Source.Camera);
+  const localScreenTrack = screenTracks.find(t => t.participant.isLocal);
+  const localCameraTrack = localParticipant?.getTrackPublication(Track.Source.Camera);
   const mainTrack = localScreenTrack || localCameraTrack;
 
   return (
@@ -752,12 +768,13 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
             {participants.filter(p => !p.isLocal).length > 0 && (
               <div className="h-28 md:h-36 w-full shrink-0 flex flex-nowrap gap-2 overflow-x-auto overflow-y-hidden pb-2 scroll-smooth scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800 px-1">
                 {participants.filter(p => !p.isLocal).map(p => {
-                  const cameraTrack = tracks.find(t => t.participant.identity === p.identity && t.source === Track.Source.Camera);
+                  const cameraPub = p.getTrackPublication(Track.Source.Camera);
+                  const isCamOn = cameraPub && cameraPub.isSubscribed && !cameraPub.isMuted;
                   return (
                     <div key={p.identity} className="h-full aspect-video min-w-[160px] md:min-w-[200px] shrink-0 rounded-lg overflow-hidden border border-slate-700 relative bg-slate-900 flex flex-col items-center justify-center group">
                       <VoiceIndicator participant={p} />
-                      {cameraTrack ? (
-                        <ParticipantTile trackRef={cameraTrack} style={{ height: '100%', width: '100%' }} />
+                      {isCamOn ? (
+                        <ParticipantTile participant={p} source={Track.Source.Camera} style={{ height: '100%', width: '100%' }} />
                       ) : (
                         <div className="flex flex-col items-center justify-center h-full w-full bg-slate-800">
                           <div className="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center text-xl font-bold text-slate-300 shadow-md border-2 border-slate-700">
@@ -766,7 +783,7 @@ function ActiveHostClassroom({ user, roomId, isTeacher, courseName }) {
                         </div>
                       )}
                       {/* Persistent Label when Camera is Off, or Overlay when Camera is On */}
-                      {!cameraTrack && (
+                      {!isCamOn && (
                         <div className="absolute bottom-2 left-2 right-2 bg-black/70 px-2 py-1 rounded text-white text-[10px] sm:text-xs flex items-center justify-between z-10">
                           <span className="truncate flex-1 mr-1 font-medium">{p.name || p.identity}</span>
                           <div className="flex items-center gap-1 shrink-0">

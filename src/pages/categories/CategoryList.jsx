@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
 import { getCategories, createCategory, deleteCategory } from '../../services/categoryService';
+import Pagination from '../../components/common/Pagination';
 
 export default function CategoryList() {
   const [categories, setCategories] = useState([]);
@@ -10,6 +11,9 @@ export default function CategoryList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   
   useEffect(() => {
@@ -55,6 +59,18 @@ export default function CategoryList() {
     }
   };
 
+  const filteredCategories = categories.filter(cat => 
+    cat.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (cat.description && cat.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
+  const paginatedCategories = filteredCategories.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <div className="space-y-6">
 
@@ -98,25 +114,20 @@ export default function CategoryList() {
               </tr>
             </thead>
             <tbody>
-              {categories.filter(cat => 
-                cat.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                (cat.description && cat.description.toLowerCase().includes(searchQuery.toLowerCase()))
-              ).map((cat) => (
-                <tr key={cat._id} className="border-b border-gray-800 hover:bg-gray-800/30">
-                  <td className="px-6 py-4 font-medium text-white">{cat.name}</td>
-                  <td className="px-6 py-4">{cat.slug}</td>
-                  <td className="px-6 py-4">{cat.description}</td>
-                  <td className="px-6 py-4 text-right space-x-3">
-                    <button onClick={() => handleDelete(cat._id)} className="text-status-error hover:text-red-400">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {categories.filter(cat => 
-                cat.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                (cat.description && cat.description.toLowerCase().includes(searchQuery.toLowerCase()))
-              ).length === 0 && (
+              {paginatedCategories.length > 0 ? (
+                paginatedCategories.map((cat) => (
+                  <tr key={cat._id} className="border-b border-gray-800 hover:bg-gray-800/30">
+                    <td className="px-6 py-4 font-medium text-white">{cat.name}</td>
+                    <td className="px-6 py-4">{cat.slug}</td>
+                    <td className="px-6 py-4">{cat.description}</td>
+                    <td className="px-6 py-4 text-right space-x-3">
+                      <button onClick={() => handleDelete(cat._id)} className="text-status-error hover:text-red-400">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
                 <tr>
                   <td colSpan="4" className="px-6 py-8 text-center">No categories found matching your search.</td>
                 </tr>
@@ -124,6 +135,13 @@ export default function CategoryList() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          itemsPerPage={itemsPerPage}
+          totalItems={filteredCategories.length}
+        />
       </div>
 
       {isModalOpen && (

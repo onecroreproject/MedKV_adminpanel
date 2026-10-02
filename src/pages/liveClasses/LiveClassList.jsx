@@ -8,6 +8,7 @@ import { getLiveClasses, deleteLiveClass, updateLiveClass } from '../../services
 import { getRecordings } from '../../services/recordingService';
 import { exportToCSV } from '../../utils/exportUtils';
 import LiveClassCalendar from './LiveClassCalendar';
+import Pagination from '../../components/common/Pagination';
 import { io } from 'socket.io-client';
 
 export default function LiveClassList() {
@@ -36,6 +37,9 @@ export default function LiveClassList() {
   const [facultyFilter, setFacultyFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('active'); // Default to active (Live & Scheduled)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const getFullVideoUrl = (url) => {
     if (!url) return '#';
@@ -170,6 +174,13 @@ export default function LiveClassList() {
     // Sort the rest by date descending
     return new Date(b.date) - new Date(a.date);
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, facultyFilter, statusFilter]);
+
+  const totalPages = Math.ceil(filteredSessions.length / itemsPerPage);
+  const paginatedSessions = filteredSessions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleExport = () => {
     const headers = [
@@ -351,7 +362,7 @@ export default function LiveClassList() {
                     </td>
                   </tr>
                 ) : (
-                  filteredSessions.map((session) => (
+                  paginatedSessions.map((session) => (
                     <tr key={session._id} className="hover:bg-gray-50/50 transition-colors group">
                       <td className="px-6 py-4">
                         <input type="checkbox" className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
@@ -442,14 +453,13 @@ export default function LiveClassList() {
                 </tbody>
               </table>
             </div>
-            {/* Pagination Dummy */}
-            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between text-sm text-text-muted">
-              <span>Showing 1 to 4 of 24 entries</span>
-              <div className="flex gap-1">
-                <button className="px-3 py-1 bg-brand-primary text-white rounded">1</button>
-                <button className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50">2</button>
-              </div>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              totalItems={filteredSessions.length}
+            />
           </div>
         </>
       ) : (

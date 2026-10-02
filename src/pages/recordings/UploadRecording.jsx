@@ -238,7 +238,7 @@ export default function UploadRecording() {
             <Video className="w-5 h-5 text-brand-primary" />
             <h3 className="font-bold text-text-main">2. Video Management</h3>
           </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="p-6 grid grid-cols-1 gap-8">
             {/* File Upload */}
             <div>
               <label className="block text-sm font-medium text-text-main mb-2">Direct File Upload</label>
@@ -281,27 +281,6 @@ export default function UploadRecording() {
                     <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }} className="mt-3 text-xs text-red-500 hover:underline">Remove File</button>
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* URL Upload */}
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-2">Or Use External URL</label>
-              <div className="space-y-4">
-                <div>
-                  <div className="relative focus-within:ring-1 focus-within:ring-brand-primary/20 rounded-lg">
-                    <LinkIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input {...register("videoUrl")} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary" placeholder="Paste YouTube, Vimeo, or Cloud link here" />
-                  </div>
-                </div>
-                
-                {/* Mock Preview Box */}
-                <div className="aspect-video bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center relative overflow-hidden">
-                  <Video className="w-8 h-8 text-gray-300" />
-                  <div className="absolute inset-0 bg-black/5 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity backdrop-blur-[1px]">
-                    <span className="text-xs font-medium bg-white px-2 py-1 rounded shadow-sm text-text-main">Preview Unavailable</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

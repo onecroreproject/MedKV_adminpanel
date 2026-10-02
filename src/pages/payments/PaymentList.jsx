@@ -6,6 +6,7 @@ import {
 import axiosInstance from '../../services/axiosInstance';
 import Badge from '../../components/common/Badge';
 import InvoiceModal from '../../components/common/InvoiceModal';
+import Pagination from '../../components/common/Pagination';
 import { createPortal } from 'react-dom';
 
 // ─── Date helpers ────────────────────────────────────────────────────────────
@@ -36,6 +37,9 @@ export default function PaymentList() {
   const [showInvoice, setShowInvoice]   = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [portalsReady, setPortalsReady] = useState(false);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     setPortalsReady(true);
@@ -74,6 +78,14 @@ export default function PaymentList() {
       return true;
     });
   }, [payments, period, customFrom, customTo, statusFilter]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [period, customFrom, customTo, statusFilter, searchTerm]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // ─── Stats from filtered data ───────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -376,7 +388,7 @@ export default function PaymentList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.length > 0 ? filtered.map(payment => (
+              {paginatedData.length > 0 ? paginatedData.map(payment => (
                 <tr key={payment._id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="p-4 align-top">
                     <span className="font-mono text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
@@ -439,6 +451,14 @@ export default function PaymentList() {
           </div>
         )}
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        totalItems={filtered.length}
+      />
 
       <InvoiceModal 
         isOpen={showInvoice} 

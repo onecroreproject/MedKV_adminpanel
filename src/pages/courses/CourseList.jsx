@@ -6,6 +6,7 @@ import Badge from '../../components/common/Badge';
 import { getCourses, deleteCourse, updateCourse } from '../../services/courseService';
 import { getCategories } from '../../services/categoryService';
 import { exportToCSV } from '../../utils/exportUtils';
+import Pagination from '../../components/common/Pagination';
 
 export default function CourseList() {
   const navigate = useNavigate();
@@ -16,7 +17,9 @@ export default function CourseList() {
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [categories, setCategories] = useState([]);
-
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
   useEffect(() => {
     setPortalsReady(true);
@@ -82,6 +85,13 @@ export default function CourseList() {
     const matchesCat = !categoryFilter || catString?.toLowerCase() === categoryFilter.toLowerCase();
     return matchesSearch && matchesStatus && matchesCat;
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, categoryFilter]);
+
+  const totalPages = Math.ceil(filteredCourses.length / itemsPerPage);
+  const paginatedCourses = filteredCourses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const getStatusColor = (status) => {
     switch(status) {
@@ -220,7 +230,7 @@ export default function CourseList() {
                   </td>
                 </tr>
               ) : (
-                filteredCourses.map((course) => (
+                paginatedCourses.map((course) => (
                   <tr key={course._id} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-6 py-4">
                       <input type="checkbox" className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
@@ -309,6 +319,13 @@ export default function CourseList() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          itemsPerPage={itemsPerPage}
+          totalItems={filteredCourses.length}
+        />
       </div>
     </div>
   );
