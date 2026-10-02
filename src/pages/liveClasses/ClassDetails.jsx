@@ -309,12 +309,34 @@ export default function ClassDetails() {
                 <div className="p-6">
                   <div className="grid grid-cols-2 gap-4 text-center">
                     <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                      <p className="text-2xl font-bold text-brand-primary">0</p>
+                      <p className="text-2xl font-bold text-brand-primary">{session.accessControl === 'selected' ? (session.selectedStudents?.length || 0) : 'All'}</p>
                       <p className="text-xs text-text-muted mt-1 uppercase">Registered</p>
                     </div>
                     <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                      <p className="text-2xl font-bold text-text-main">-</p>
+                      <p className="text-2xl font-bold text-text-main">{attendanceData.filter(a => a.status === 'Present' || a.status === 'Partial').length}</p>
                       <p className="text-xs text-text-muted mt-1 uppercase">Attended</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                      <p className="text-lg font-bold text-text-main">
+                        {attendanceData.length > 0 ? Math.round(attendanceData.reduce((acc, a) => acc + (a.duration || 0), 0) / attendanceData.length) : 0}m
+                      </p>
+                      <p className="text-xs text-text-muted mt-1 uppercase">Avg. Duration</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                      <p className="text-lg font-bold text-text-main">{session.duration || 0}m</p>
+                      <p className="text-xs text-text-muted mt-1 uppercase">Class Duration</p>
+                    </div>
+                    <div className="col-span-2 p-4 bg-gray-50 rounded-lg border border-gray-100 text-sm">
+                      <div className="flex justify-between items-center px-4">
+                        <div className="text-left">
+                          <p className="text-xs text-text-muted uppercase mb-1">Started At</p>
+                          <p className="font-medium">{session.startedAt ? new Date(session.startedAt).toLocaleTimeString() : 'Not Started'}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-text-muted uppercase mb-1">Ended At</p>
+                          <p className="font-medium">{session.endedAt ? new Date(session.endedAt).toLocaleTimeString() : 'Not Ended'}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -383,22 +405,28 @@ export default function ClassDetails() {
         {/* Attendance Tab */}
         {activeTab === 'attendance' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Total Registered</p>
-                <p className="text-2xl font-bold text-text-main">0</p>
+                <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Registered</p>
+                <p className="text-2xl font-bold text-text-main">{session.accessControl === 'selected' ? (session.selectedStudents?.length || 0) : 'All Enrolled'}</p>
               </div>
               <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                 <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Present</p>
                 <p className="text-2xl font-bold text-emerald-600">{attendanceData.filter(a => a.status === 'Present').length}</p>
               </div>
               <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Partial</p>
+                <p className="text-2xl font-bold text-amber-600">{attendanceData.filter(a => a.status === 'Partial').length}</p>
+              </div>
+              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                 <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Absent</p>
                 <p className="text-2xl font-bold text-red-600">{attendanceData.filter(a => a.status === 'Absent').length}</p>
               </div>
               <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Attendance Rate</p>
-                <p className="text-2xl font-bold text-brand-primary">0%</p>
+                <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Att. Rate</p>
+                <p className="text-2xl font-bold text-brand-primary">
+                  {attendanceData.length > 0 ? Math.round((attendanceData.filter(a => a.status === 'Present' || a.status === 'Partial').length / attendanceData.length) * 100) : 0}%
+                </p>
               </div>
             </div>
 
@@ -430,7 +458,8 @@ export default function ClassDetails() {
                         <td className="px-6 py-3">
                           <Badge status={
                             record.status === 'Present' ? 'success' : 
-                            record.status === 'Absent' ? 'danger' : 'warning'
+                            record.status === 'Partial' ? 'warning' :
+                            record.status === 'Absent' ? 'danger' : 'default'
                           }>{record.status}</Badge>
                         </td>
                       </tr>
