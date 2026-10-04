@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Badge from '../../components/common/Badge';
 import { getStudentById, sendMessageToStudent } from '../../services/studentService';
+import { getCourses } from '../../services/courseService';
 import axios from 'axios';
 
 export default function StudentDetails() {
@@ -20,6 +21,11 @@ export default function StudentDetails() {
   const [messageTitle, setMessageTitle] = useState('');
   const [messageContent, setMessageContent] = useState('');
   const [isSending, setIsSending] = useState(false);
+
+  const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
+  const [availableCourses, setAvailableCourses] = useState([]);
+  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [isEnrolling, setIsEnrolling] = useState(false);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -38,6 +44,43 @@ export default function StudentDetails() {
       setIsSending(false);
     }
   };
+
+  const handleManualEnroll = async (e) => {
+    e.preventDefault();
+    if (!selectedCourseId) return;
+    setIsEnrolling(true);
+    try {
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+      await axios.post(`${import.meta.env.VITE_API_URL}/students/${id}/enroll`, { courseId: selectedCourseId }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Student enrolled successfully!');
+      setIsEnrollModalOpen(false);
+      // Refresh student data
+      const response = await getStudentById(id);
+      if (response.success) {
+        setStudentData(response.data);
+      }
+    } catch (err) {
+      alert("Failed to enroll: " + (err.response?.data?.message || err.message));
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const res = await getCourses();
+        if (res.success) {
+          setAvailableCourses(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch courses", err);
+      }
+    };
+    fetchCourses();
+  }, []);
 
   useEffect(() => {
     const fetchStudent = async () => {
@@ -146,6 +189,9 @@ export default function StudentDetails() {
           <div className="space-y-3 pt-2 lg:pt-0">
             <button onClick={() => setIsMessageModalOpen(true)} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium hover:bg-brand-primary/90">
               <Mail className="w-4 h-4" /> Send Message
+            </button>
+            <button onClick={() => setIsEnrollModalOpen(true)} className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-brand-primary text-brand-primary rounded-lg text-sm font-medium hover:bg-brand-primary/10 mt-2">
+              <BookOpen className="w-4 h-4" /> Assign Course
             </button>
           </div>
         </div>
@@ -408,6 +454,65 @@ export default function StudentDetails() {
                     <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Sending...</>
                   ) : (
                     <><Mail className="w-4 h-4" /> Send Message</>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Enroll Modal */}
+      {isEnrollModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-fade-in">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+              <h3 className="text-lg font-bold text-text-main flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-brand-primary" />
+                Assign Course
+              </h3>
+              <button 
+                onClick={() => setIsEnrollModalOpen(false)}
+                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleManualEnroll} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text-main mb-1">Select Course</label>
+                <select
+                  required
+                  value={selectedCourseId}
+                  onChange={(e) => setSelectedCourseId(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                >
+                  <option value="">Select a course...</option>
+                  {availableCourses.map((course) => (
+                    <option key={course._id} value={course._id}>
+                      {course.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="pt-2 flex justify-end gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setIsEnrollModalOpen(false)}
+                  className="px-4 py-2 border border-gray-200 bg-white text-text-main rounded-lg text-sm font-medium hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isEnrolling || !selectedCourseId}
+                  className="px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium hover:bg-brand-primary/90 disabled:opacity-70 flex items-center gap-2"
+                >
+                  {isEnrolling ? (
+                    <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Enrolling...</>
+                  ) : (
+                    <><CheckCircle className="w-4 h-4" /> Enroll Student</>
                   )}
                 </button>
               </div>
