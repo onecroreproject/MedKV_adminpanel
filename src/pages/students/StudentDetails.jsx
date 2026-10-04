@@ -68,6 +68,24 @@ export default function StudentDetails() {
     }
   };
 
+  const handleManualUnenroll = async (courseId) => {
+    if (!window.confirm("Are you sure you want to unassign this course from the student?")) return;
+    try {
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+      await axios.post(`${import.meta.env.VITE_API_URL}/students/${id}/unenroll`, { courseId }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Student unenrolled successfully!');
+      // Refresh student data
+      const response = await getStudentById(id);
+      if (response.success) {
+        setStudentData(response.data);
+      }
+    } catch (err) {
+      alert("Failed to unenroll: " + (err.response?.data?.message || err.message));
+    }
+  };
+
   useEffect(() => {
     const fetchCourses = async () => {
       try {
@@ -243,7 +261,10 @@ export default function StudentDetails() {
                         <h4 className="font-bold text-brand-primary text-lg">{course.name}</h4>
                         <p className="text-xs text-text-muted mt-0.5">Course Access</p>
                       </div>
-                      <Badge status={isExpired ? "danger" : "success"}>{isExpired ? "Expired" : "Active"}</Badge>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge status={isExpired ? "danger" : "success"}>{isExpired ? "Expired" : "Active"}</Badge>
+                        <button onClick={() => handleManualUnenroll(course.id)} className="text-xs text-red-500 hover:text-red-700 font-medium">Unassign</button>
+                      </div>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
@@ -293,7 +314,10 @@ export default function StudentDetails() {
                 <div className="col-span-1 md:col-span-2 text-center text-text-muted py-4">No purchased courses yet.</div>
               ) : (
                 purchasedCourses.map(course => (
-                  <div key={course.id} className="border border-gray-100 rounded-xl p-4 hover:border-brand-primary/30 transition-colors">
+                  <div key={course.id} className="border border-gray-100 rounded-xl p-4 hover:border-brand-primary/30 transition-colors relative">
+                    <button onClick={() => handleManualUnenroll(course.id)} className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Unassign Course">
+                      <Ban className="w-4 h-4" />
+                    </button>
                     <div className="flex gap-4">
                       <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 shrink-0">
                         <BookOpen className="w-6 h-6" />
