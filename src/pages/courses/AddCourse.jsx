@@ -32,6 +32,7 @@ export default function AddCourse() {
   
   const { register, handleSubmit, control, watch, setValue, getValues, reset } = useForm({
     defaultValues: {
+      isImportant: false,
       learningOutcomes: [],
       liveSessions: [],
       pacsCases: [],
