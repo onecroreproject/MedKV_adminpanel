@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Download, MoreVertical, Search, Filter, BookOpen, Users, DollarSign, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Download, MoreVertical, Search, Filter, BookOpen, Users, DollarSign, Edit, Trash2, Eye, Check, Ban } from 'lucide-react';
 import Badge from '../../components/common/Badge';
 import { getCourses, deleteCourse, updateCourse } from '../../services/courseService';
 import { getCategories } from '../../services/categoryService';
@@ -173,26 +173,37 @@ export default function CourseList() {
       
 
       {/* Filters Area */}
-      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col lg:flex-row gap-4">
-        
-        <div className="flex flex-wrap lg:flex-nowrap gap-3">
-          <select 
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary min-w-[150px]">
-            <option value="">Category</option>
-            {categories.map(cat => (
-              <option key={cat._id} value={cat.name}>{cat.name}</option>
-            ))}
-          </select>
-          <select 
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary min-w-[150px]">
-            <option value="">Status</option>
-            <option value="Published">Published</option>
-            <option value="Draft">Draft</option>
-          </select>
+      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <select 
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary min-w-[150px]">
+              <option value="">All Categories</option>
+              {categories.map(cat => (
+                <option key={cat._id} value={cat.name}>{cat.name}</option>
+              ))}
+            </select>
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary min-w-[150px]">
+              <option value="">All Statuses</option>
+              <option value="Published">Published</option>
+              <option value="Draft">Draft</option>
+            </select>
+          </div>
+          
+          {/* Modern Count Badge */}
+          <div className="flex items-center w-full md:w-auto justify-end">
+            <div className="bg-brand-primary/5 border border-brand-primary/10 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></span>
+              <span className="text-text-muted text-sm font-medium">Showing</span>
+              <span className="text-brand-primary font-bold text-sm bg-white px-2 py-0.5 rounded border border-brand-primary/20 shadow-sm">{filteredCourses.length}</span>
+              <span className="text-text-muted text-sm font-medium">Courses</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -202,22 +213,17 @@ export default function CourseList() {
           <table className="w-full text-left text-sm text-text-main whitespace-nowrap">
             <thead className="bg-gray-50 text-text-muted font-medium border-b border-gray-100">
               <tr>
-                <th className="px-6 py-4">
-                  <input type="checkbox" className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
-                </th>
                 <th className="px-6 py-4">Course Info</th>
                 <th className="px-6 py-4">Category</th>
-                <th className="px-6 py-4">Faculty</th>
                 <th className="px-6 py-4">Price</th>
                 <th className="px-6 py-4">Students</th>
-                <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {isLoading ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
                     <div className="flex justify-center items-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
                     </div>
@@ -225,7 +231,7 @@ export default function CourseList() {
                 </tr>
               ) : filteredCourses.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
                     No courses found.
                   </td>
                 </tr>
@@ -233,17 +239,22 @@ export default function CourseList() {
                 paginatedCourses.map((course) => (
                   <tr key={course._id} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-6 py-4">
-                      <input type="checkbox" className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
-                    </td>
-                    <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-lg bg-brand-primary/10 text-brand-primary flex items-center justify-center font-bold text-sm border border-brand-primary/20 shrink-0">
-                          {course.title ? course.title.substring(0, 2).toUpperCase() : 'CO'}
+                        <div className="relative">
+                          <div className="w-10 h-10 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center font-semibold text-sm border border-brand-primary/20 uppercase">
+                            {course.title ? course.title.substring(0, 2) : 'CO'}
+                          </div>
+                          {course.status === 'Published' && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center shadow-sm" title="Published">
+                              <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                            </div>
+                          )}
                         </div>
                         <div>
                           <button 
                             onClick={() => navigate(`/courses/${course._id}`)}
-                            className="font-semibold text-text-main hover:text-brand-primary transition-colors text-left"
+                            className="font-semibold text-text-main hover:text-brand-primary transition-colors text-left line-clamp-2 whitespace-normal max-w-[250px]"
+                            title={course.title}
                           >
                             {course.title}
                           </button>
@@ -257,7 +268,6 @@ export default function CourseList() {
                         {course.category?.name || course.category}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-text-muted">{course.instructor?.name || 'Unknown'}</td>
                     <td className="px-6 py-4 font-medium text-text-main">
                       {course.originalPrice && <span className="text-gray-400 line-through text-xs mr-2">₹{course.originalPrice}</span>}
                       ₹{course.price}
@@ -266,26 +276,6 @@ export default function CourseList() {
                       <div className="flex items-center gap-1.5 text-text-muted">
                         <Users className="w-4 h-4" />
                         {course.studentCount || 0}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleStatusToggle(course._id, course.status)}
-                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            course.status === 'Published' ? 'bg-green-500' : 'bg-gray-300'
-                          }`}
-                          role="switch"
-                          aria-checked={course.status === 'Published'}
-                        >
-                          <span
-                            aria-hidden="true"
-                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              course.status === 'Published' ? 'translate-x-4' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
-                        <Badge status={getStatusColor(course.status)}>{course.status}</Badge>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -303,6 +293,13 @@ export default function CourseList() {
                           title="Curriculum"
                         >
                           <BookOpen className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleStatusToggle(course._id, course.status)}
+                          className={`p-2 rounded-lg transition-colors ${course.status === 'Published' ? 'hover:bg-yellow-50 text-yellow-500 hover:text-yellow-600' : 'hover:bg-green-50 text-green-500 hover:text-green-600'}`}
+                          title={course.status === 'Published' ? "Unpublish Course" : "Publish Course"}
+                        >
+                          {course.status === 'Published' ? <Ban className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                         </button>
                         <button 
                           onClick={() => handleDelete(course._id)}

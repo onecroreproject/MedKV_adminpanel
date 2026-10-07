@@ -77,7 +77,15 @@ export function CourseEnrollmentChart({ data }) {
           <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
             <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#60738A' }} />
-            <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#60738A' }} width={100} />
+            <YAxis 
+              dataKey="name" 
+              type="category" 
+              axisLine={false} 
+              tickLine={false} 
+              tick={{ fontSize: 12, fill: '#60738A' }} 
+              width={160} 
+              tickFormatter={(value) => value.length > 25 ? value.substring(0, 25) + '...' : value}
+            />
             <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
             <Bar dataKey="students" fill="#0B1F4D" radius={[0, 4, 4, 0]} barSize={24} />
           </BarChart>

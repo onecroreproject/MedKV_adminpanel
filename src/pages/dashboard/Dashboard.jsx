@@ -65,9 +65,6 @@ export default function Dashboard() {
             <p className="font-medium text-text-main">{currentDate}</p>
             <p className="text-text-muted">System Status: <span className="text-status-success font-medium">All systems operational</span></p>
           </div>
-          <button className="bg-brand-primary text-white px-5 py-2.5 rounded-lg font-medium hover:bg-brand-primary/90 transition-colors shadow-sm shadow-brand-primary/30">
-            Download Report
-          </button>
         </div>
       </div>
 
@@ -105,17 +102,15 @@ export default function Dashboard() {
         <RevenueAnalyticsChart data={data?.revenueData} />
       </div>
 
-      {/* Main Content Area Row 2 */}
+      {/* Middle Row: Course Enrollment & Upcoming Classes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <RecentEnrollmentsTable data={data?.recentEnrollmentsList} />
+        <div className="lg:col-span-2">
           <CourseEnrollmentChart data={data?.topCourses} />
         </div>
         
-        {/* Right Sidebar Widgets */}
-        <div className="space-y-6">
+        <div className="lg:col-span-1">
           {/* Upcoming Classes */}
-          <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+          <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm h-full">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-text-main">Upcoming Live Classes</h3>
               <button className="text-brand-primary text-sm font-medium">View All</button>
@@ -152,61 +147,12 @@ export default function Dashboard() {
               Schedule New Class
             </button>
           </div>
-
-          {/* Pending Approvals */}
-          <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-            <div className="mb-4">
-              <h3 className="text-lg font-bold text-text-main">Pending Approvals</h3>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-100">
-                <div className="flex items-center gap-3">
-                  <FolderOpen className="w-5 h-5 text-orange-600" />
-                  <div>
-                    <p className="text-sm font-medium text-text-main">Case Studies</p>
-                    <p className="text-xs text-text-muted">12 pending review</p>
-                  </div>
-                </div>
-                <button className="text-orange-600 bg-white px-3 py-1 rounded text-xs font-medium border border-orange-200 hover:bg-orange-100">Review</button>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <div className="flex items-center gap-3">
-                  <HelpCircle className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <p className="text-sm font-medium text-text-main">MCQ Questions</p>
-                    <p className="text-xs text-text-muted">8 pending review</p>
-                  </div>
-                </div>
-                <button className="text-blue-600 bg-white px-3 py-1 rounded text-xs font-medium border border-blue-200 hover:bg-blue-100">Review</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Platform Health */}
-          <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-            <h3 className="text-lg font-bold text-text-main mb-4">Platform Health</h3>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-text-muted">Server Load</span>
-                  <span className="font-medium text-text-main">42%</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-2">
-                  <div className="bg-status-success h-2 rounded-full" style={{ width: '42%' }}></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-text-muted">Storage Usage</span>
-                  <span className="font-medium text-text-main">78%</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-2">
-                  <div className="bg-status-warning h-2 rounded-full" style={{ width: '78%' }}></div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
+      </div>
+
+      {/* Bottom Row: Recent Enrollments (Full Width) */}
+      <div className="w-full">
+        <RecentEnrollmentsTable data={data?.recentEnrollmentsList} />
       </div>
     </div>
   );

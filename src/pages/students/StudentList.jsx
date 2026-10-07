@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Download, MoreVertical, Search, Filter, Mail, Phone, Calendar, Edit, Trash2, Ban, Eye } from 'lucide-react';
+import { Plus, Download, MoreVertical, Search, Filter, Mail, Phone, Calendar, Edit, Trash2, Ban, Eye, Check } from 'lucide-react';
 import Badge from '../../components/common/Badge';
-import { getStudents, deleteStudent } from '../../services/studentService';
+import { getStudents, deleteStudent, toggleStudentStatus } from '../../services/studentService';
 import { getCourses } from '../../services/courseService';
 import { exportToCSV } from '../../utils/exportUtils';
 import Pagination from '../../components/common/Pagination';
@@ -135,6 +135,20 @@ export default function StudentList() {
     exportToCSV(exportData, headers, 'students_export.csv');
   };
 
+  const handleToggleStatus = async (id) => {
+    try {
+      const res = await toggleStudentStatus(id);
+      if (res.success) {
+        setStudents(students.map(student => 
+          student._id === id ? { ...student, isActive: res.isActive } : student
+        ));
+      }
+    } catch (err) {
+      console.error('Failed to toggle status:', err);
+      alert('Failed to update student status. Please try again.');
+    }
+  };
+
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this student?')) {
       try {
@@ -178,51 +192,63 @@ export default function StudentList() {
           >
             <Download className="w-4 h-4" /> Export
           </button>
-          <button className="flex items-center justify-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium hover:bg-brand-primary/90 transition-colors">
-            <Plus className="w-4 h-4 text-brand-accent" /> Add Student
-          </button>
         </>,
         document.getElementById('topbar-actions-portal')
       )}
 
       {/* Filters Area */}
-      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col xl:flex-row gap-4">
-        <div className="flex flex-wrap gap-3">
-          <select 
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary min-w-[150px]">
-            <option value="">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="not-enrolled">Not Enrolled</option>
-          </select>
-          <select 
-            value={courseFilter}
-            onChange={(e) => setCourseFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary min-w-[150px]">
-            <option value="">All Courses</option>
-            {courses.map(course => (
-              <option key={course._id} value={course._id}>{course.title}</option>
-            ))}
-          </select>
-          <div className="flex items-center gap-2">
-            <input 
-              type="date" 
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary"
-              title="Start Date"
-            />
-            <span className="text-text-muted text-sm">to</span>
-            <input 
-              type="date" 
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary"
-              title="End Date"
-            />
+      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col gap-4">
+        {/* Row 1: Select Filters and Count */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary min-w-[150px]">
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="not-enrolled">Not Enrolled</option>
+            </select>
+            <select 
+              value={courseFilter}
+              onChange={(e) => setCourseFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary min-w-[150px] max-w-full md:max-w-[400px]">
+              <option value="">All Courses</option>
+              {courses.map(course => (
+                <option key={course._id} value={course._id}>{course.title}</option>
+              ))}
+            </select>
           </div>
+          
+          {/* Modern Count Badge */}
+          <div className="flex items-center w-full md:w-auto justify-end">
+            <div className="bg-brand-primary/5 border border-brand-primary/10 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></span>
+              <span className="text-text-muted text-sm font-medium">Showing</span>
+              <span className="text-brand-primary font-bold text-sm bg-white px-2 py-0.5 rounded border border-brand-primary/20 shadow-sm">{filteredStudents.length}</span>
+              <span className="text-text-muted text-sm font-medium">Students</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: Date Filters */}
+        <div className="flex items-center gap-2">
+          <input 
+            type="date" 
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary"
+            title="Start Date"
+          />
+          <span className="text-text-muted text-sm">to</span>
+          <input 
+            type="date" 
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-text-main focus:outline-none focus:border-brand-primary"
+            title="End Date"
+          />
         </div>
       </div>
 
@@ -232,21 +258,17 @@ export default function StudentList() {
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead className="bg-gray-50 text-text-muted font-medium border-b border-gray-100">
               <tr>
-                <th className="px-6 py-4">
-                  <input type="checkbox" className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
-                </th>
+
                 <th className="px-6 py-4">Student</th>
                 <th className="px-6 py-4">Contact</th>
-                <th className="px-6 py-4">Reg. Date</th>
                 <th className="px-6 py-4">Courses & Progress</th>
-                <th className="px-6 py-4">Account Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {isLoading ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
                     <div className="flex justify-center items-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
                     </div>
@@ -254,20 +276,25 @@ export default function StudentList() {
                 </tr>
               ) : filteredStudents.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
                     No students found.
                   </td>
                 </tr>
               ) : (
                 paginatedStudents.map((student) => (
                   <tr key={student._id} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <input type="checkbox" className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
-                    </td>
+
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center font-semibold text-sm border border-brand-primary/20 uppercase">
-                          {student.name ? student.name.substring(0, 2) : 'ST'}
+                        <div className="relative">
+                          <div className="w-10 h-10 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center font-semibold text-sm border border-brand-primary/20 uppercase">
+                            {student.name ? student.name.substring(0, 2) : 'ST'}
+                          </div>
+                          {student.isActive !== false && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center shadow-sm" title="Active">
+                              <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                            </div>
+                          )}
                         </div>
                         <div>
                           <button 
@@ -276,7 +303,9 @@ export default function StudentList() {
                           >
                             {student.name || 'Unknown Student'}
                           </button>
-                          <p className="text-xs text-text-muted mt-0.5">ID: {student._id.substring(student._id.length - 6).toUpperCase()}</p>
+                          <p className="text-xs text-text-muted mt-0.5">
+                            ID: {student._id.substring(student._id.length - 6).toUpperCase()} • Reg: {new Date(student.createdAt).toLocaleDateString()}
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -286,9 +315,7 @@ export default function StudentList() {
                         <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {student.phoneNumber || 'N/A'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-text-muted text-sm">
-                      {new Date(student.createdAt).toLocaleDateString()}
-                    </td>
+
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1.5">
                         <span className="text-xs font-medium">
@@ -316,11 +343,7 @@ export default function StudentList() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <Badge status={student.isActive !== false ? "success" : "warning"}>
-                        {student.isActive !== false ? "Active" : "Inactive"}
-                      </Badge>
-                    </td>
+
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
                         <button 
@@ -331,11 +354,11 @@ export default function StudentList() {
                           <Eye className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => {}}
-                          className="p-2 hover:bg-yellow-50 rounded-lg text-yellow-500 hover:text-yellow-600 transition-colors"
-                          title="Suspend Student"
+                          onClick={() => handleToggleStatus(student._id)}
+                          className={`p-2 rounded-lg transition-colors ${student.isActive !== false ? 'hover:bg-yellow-50 text-yellow-500 hover:text-yellow-600' : 'hover:bg-green-50 text-green-500 hover:text-green-600'}`}
+                          title={student.isActive !== false ? "Suspend Student" : "Activate Student"}
                         >
-                          <Ban className="w-4 h-4" />
+                          {student.isActive !== false ? <Ban className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                         </button>
                         <button 
                           onClick={() => handleDelete(student._id)}

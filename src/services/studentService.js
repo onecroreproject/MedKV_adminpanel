@@ -20,3 +20,8 @@ export const deleteStudent = async (id) => {
   const response = await axiosInstance.delete(`/students/${id}`);
   return response.data;
 };
+
+export const toggleStudentStatus = async (id) => {
+  const response = await axiosInstance.patch(`/students/${id}/toggle-status`);
+  return response.data;
+};

@@ -263,10 +263,7 @@ export default function AddCourse() {
                 </label>
                 <input {...register('title')} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20" placeholder="Enter course title" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-text-main mb-1.5">Course Slug (Optional)</label>
-                <input {...register('slug')} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20" placeholder="Leave empty to auto-generate from title" />
-              </div>
+
               <div>
                 <label className="block text-sm font-medium text-text-main mb-1.5">Category</label>
                 <select {...register('category')} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20">
@@ -293,22 +290,7 @@ export default function AddCourse() {
                   </label>
                 </div>
               </div>
-              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-text-main mb-1.5">Start Date</label>
-                  <div className="relative">
-                    <input type="date" {...register('startDate')} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-main mb-1.5">Start Time</label>
-                  <input type="time" {...register('startTime')} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-main mb-1.5">End Time</label>
-                  <input type="time" {...register('endTime')} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/20" />
-                </div>
-              </div>
+
               <div className="md:col-span-2 mt-2 p-4 bg-yellow-50 border border-yellow-200 rounded-xl flex items-start space-x-3">
                 <input type="checkbox" {...register('isImportant')} className="mt-1 w-4 h-4 text-brand-primary rounded border-gray-300 focus:ring-brand-primary cursor-pointer" />
                 <div>
@@ -448,15 +430,8 @@ export default function AddCourse() {
                   </div>
                   <span className="text-sm font-medium text-text-main">Free Course</span>
                 </label>
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <div className="relative">
-                    <input type="checkbox" {...register('isFeatured')} className="sr-only peer" />
-                    <div className="w-10 h-5 bg-gray-200 rounded-full group-hover:bg-gray-300 transition-colors peer-checked:bg-brand-primary"></div>
-                    <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
-                  </div>
-                  <span className="text-sm font-medium text-text-main">Featured Course</span>
-                </label>
               </div>
+
             </div>
             
             <div className="pt-6 border-t border-gray-100">
@@ -505,6 +480,24 @@ export default function AddCourse() {
                   </label>
                 )) : <p className="text-sm text-gray-500">No faculty found. Please add faculty first.</p>}
               </div>
+            </div>
+
+            {/* Live Sessions */}
+            <div className="space-y-4 pt-6 border-t border-gray-100 mt-6">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-text-main">Schedule the Live Session</h4>
+                <button type="button" onClick={() => appendLS({ sessionType: 'Live', date: '', time: '' })} className="text-sm text-brand-primary font-medium hover:underline flex items-center gap-1"><Plus className="w-4 h-4"/> Add Session</button>
+              </div>
+              {liveSessions.map((item, index) => (
+                <div key={item.id} className="flex gap-4 p-4 border border-gray-100 bg-gray-50 rounded-lg">
+                  <div className="flex-1 grid grid-cols-2 gap-3">
+                    <select {...register(`liveSessions.${index}.sessionType`)} className="col-span-2 px-3 py-1.5 border border-gray-200 rounded text-sm"><option value="Live">Live</option><option value="Recording">Recording</option></select>
+                    <input type="date" {...register(`liveSessions.${index}.date`)} className="px-3 py-1.5 border border-gray-200 rounded text-sm" />
+                    <input type="time" {...register(`liveSessions.${index}.time`)} className="px-3 py-1.5 border border-gray-200 rounded text-sm" />
+                  </div>
+                  <button type="button" onClick={() => removeLS(index)} className="text-red-500 hover:text-red-700 h-fit p-1"><X className="w-5 h-5"/></button>
+                </div>
+              ))}
             </div>
           </div>
         );
@@ -557,27 +550,7 @@ export default function AddCourse() {
               ))}
             </div>
 
-            {/* Live Sessions */}
-            <div className="space-y-4 pt-4 border-t border-gray-100">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-text-main">Live Classes & Recordings</h4>
-                <button type="button" onClick={() => appendLS({ sessionType: 'Live', title: '', date: '', time: '', duration: '', accessibility: '', accessTerms: '' })} className="text-sm text-brand-primary font-medium hover:underline flex items-center gap-1"><Plus className="w-4 h-4"/> Add Session</button>
-              </div>
-              {liveSessions.map((item, index) => (
-                <div key={item.id} className="flex gap-4 p-4 border border-gray-100 bg-gray-50 rounded-lg">
-                  <div className="flex-1 grid grid-cols-2 gap-3">
-                    <select {...register(`liveSessions.${index}.sessionType`)} className="col-span-2 sm:col-span-1 px-3 py-1.5 border border-gray-200 rounded text-sm"><option value="Live">Live</option><option value="Recording">Recording</option></select>
-                    <input {...register(`liveSessions.${index}.title`)} placeholder="Session Title" className="col-span-2 sm:col-span-1 px-3 py-1.5 border border-gray-200 rounded text-sm" />
-                    <input {...register(`liveSessions.${index}.date`)} placeholder="Date (e.g. May 30, 2026)" className="px-3 py-1.5 border border-gray-200 rounded text-sm" />
-                    <input {...register(`liveSessions.${index}.time`)} placeholder="Time (e.g. 18:00 - 21:00 GMT)" className="px-3 py-1.5 border border-gray-200 rounded text-sm" />
-                    <input {...register(`liveSessions.${index}.duration`)} placeholder="Duration / Cloud Archive (e.g. 180 mins HD)" className="px-3 py-1.5 border border-gray-200 rounded text-sm" />
-                    <input {...register(`liveSessions.${index}.accessibility`)} placeholder="Accessibility (e.g. Missed Live Replay)" className="px-3 py-1.5 border border-gray-200 rounded text-sm" />
-                    <input {...register(`liveSessions.${index}.accessTerms`)} placeholder="Access Terms (e.g. Valid for 7 Days)" className="col-span-2 px-3 py-1.5 border border-gray-200 rounded text-sm" />
-                  </div>
-                  <button type="button" onClick={() => removeLS(index)} className="text-red-500 hover:text-red-700 h-fit p-1"><X className="w-5 h-5"/></button>
-                </div>
-              ))}
-            </div>
+
 
             {/* PACS Cases */}
             <div className="space-y-4 pt-4 border-t border-gray-100">

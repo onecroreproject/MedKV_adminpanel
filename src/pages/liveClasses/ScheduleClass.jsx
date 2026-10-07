@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useForm, Controller } from 'react-hook-form';
-import ReactQuill from 'react-quill-new';
-import 'react-quill-new/dist/quill.snow.css';
-import { ArrowLeft, Save, X, Video, Calendar, Link as LinkIcon, Shield, Clock, BookOpen, Layers, CheckSquare, CheckCircle } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { ArrowLeft, Save, Video, Calendar, Link as LinkIcon, Shield, Clock, BookOpen, Layers, CheckSquare, CheckCircle } from 'lucide-react';
 import { getCourses, getCourseById } from '../../services/courseService';
 import { getFaculty } from '../../services/facultyService';
 import { createLiveClass, getLiveClass, updateLiveClass } from '../../services/liveClassService';
@@ -13,7 +11,7 @@ export default function ScheduleClass() {
   const navigate = useNavigate();
   const isEditMode = Boolean(id);
   const [existingSession, setExistingSession] = useState(null);
-  const { register, handleSubmit, getValues, watch, reset, control } = useForm({
+  const { register, handleSubmit, getValues, watch, reset, setValue, control } = useForm({
     defaultValues: {
       meetingProvider: 'zoom'
     }
@@ -22,7 +20,7 @@ export default function ScheduleClass() {
   const [facultyList, setFacultyList] = useState([]);
   const [modules, setModules] = useState([]);
   const [lessons, setLessons] = useState([]);
-  const [studentsList, setStudentsList] = useState([]);
+  const [autoFaculty, setAutoFaculty] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isLinkVerified, setIsLinkVerified] = useState(isEditMode);
   const zoomLinkValue = watch("zoomLink");
@@ -40,8 +38,21 @@ export default function ScheduleClass() {
   useEffect(() => {
     if (selectedCourseId) {
       getCourseById(selectedCourseId).then(res => {
-        if (res.success && res.data.modules) {
-          setModules(res.data.modules);
+        if (res.success) {
+          if (res.data.modules) setModules(res.data.modules);
+          else setModules([]);
+          // Auto-populate faculty from the course's assigned instructor
+          if (res.data.instructor) {
+            const instr = res.data.instructor;
+            setAutoFaculty(instr);
+            setValue('faculty', instr._id || instr);
+          } else {
+            setAutoFaculty(null);
+          }
+          // Auto-fill notes from course description
+          if (res.data.description) {
+            setValue('notes', res.data.description);
+          }
         } else {
           setModules([]);
         }
@@ -49,8 +60,9 @@ export default function ScheduleClass() {
     } else {
       setModules([]);
       setLessons([]);
+      setAutoFaculty(null);
     }
-  }, [selectedCourseId]);
+  }, [selectedCourseId, setValue]);
 
   useEffect(() => {
     if (selectedModuleId && modules.length > 0) {
@@ -66,15 +78,7 @@ export default function ScheduleClass() {
   }, [selectedModuleId, modules]);
 
   useEffect(() => {
-    if (accessControlVal === 'selected') {
-      import('../../services/studentService').then(module => {
-        module.getStudents(selectedCourseId).then(res => {
-          if (res.success) {
-            setStudentsList(res.data);
-          }
-        }).catch(err => console.error(err));
-      });
-    }
+    // 'selected' access control reserved for future use
   }, [accessControlVal, selectedCourseId]);
 
   useEffect(() => {
@@ -134,6 +138,9 @@ export default function ScheduleClass() {
     }
 
     const payload = { ...data };
+    // Use course title as session title automatically
+    const selectedCourse = courses.find(c => c._id === data.course);
+    if (selectedCourse) payload.title = selectedCourse.title;
     ['course', 'courseModule', 'lesson', 'faculty'].forEach(field => {
       if (payload[field] === '') {
         payload[field] = null;
@@ -233,10 +240,7 @@ export default function ScheduleClass() {
               </div>
             </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-text-main mb-1.5">Session Title *</label>
-              <input {...register("title")} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20" placeholder="e.g. Brain MRI Interpretation Workshop" required />
-            </div>
+
 
             {/* Conditionally render Course/Module/Lesson */}
             {accessControlVal === 'course' && (
@@ -280,31 +284,27 @@ export default function ScheduleClass() {
 
             <div>
               <label className="block text-sm font-medium text-text-main mb-1.5">Faculty *</label>
-              <select {...register("faculty", { required: true })} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20">
-                <option value="">Select Faculty</option>
-                {facultyList.map(faculty => (
-                  <option key={faculty._id} value={faculty._id}>{faculty.name}</option>
-                ))}
-              </select>
+              {autoFaculty ? (
+                <div className="flex items-center gap-3 px-4 py-2.5 border border-green-200 bg-green-50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                    {autoFaculty.name ? autoFaculty.name.substring(0, 2) : 'FA'}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-text-main">{autoFaculty.name}</p>
+                    <p className="text-xs text-green-600 font-medium">Auto-assigned from course</p>
+                  </div>
+                  <input type="hidden" {...register("faculty")} value={autoFaculty._id || ''} />
+                </div>
+              ) : (
+                <select {...register("faculty", { required: true })} className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20">
+                  <option value="">Select Faculty</option>
+                  {facultyList.map(faculty => (
+                    <option key={faculty._id} value={faculty._id}>{faculty.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-text-main mb-1.5">Session Notes</label>
-              <div className="border border-gray-200 rounded-lg overflow-hidden focus-within:ring-1 focus-within:border-brand-primary focus-within:ring-brand-primary/20">
-                <Controller
-                  name="notes"
-                  control={control}
-                  render={({ field }) => (
-                    <ReactQuill 
-                      theme="snow" 
-                      value={field.value || ''} 
-                      onChange={field.onChange}
-                      placeholder="Enter agenda, learning objectives, or prerequisites..."
-                      className="bg-white border-none"
-                    />
-                  )}
-                />
-              </div>
-            </div>
+
           </div>
         </div>
 
@@ -323,16 +323,7 @@ export default function ScheduleClass() {
               <label className="block text-sm font-medium text-text-main mb-1.5">Start Time *</label>
               <input disabled={isDateDisabled} {...register("time")} type="time" className={`w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20 ${isDateDisabled ? 'bg-gray-100 text-gray-500' : ''}`} />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-1.5">Duration *</label>
-              <select disabled={isDateDisabled} {...register("duration")} className={`w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:border-brand-primary focus:ring-brand-primary/20 ${isDateDisabled ? 'bg-gray-100 text-gray-500' : ''}`}>
-                <option value="30">30 Minutes</option>
-                <option value="45">45 Minutes</option>
-                <option value="60">60 Minutes</option>
-                <option value="90">90 Minutes</option>
-                <option value="120">120 Minutes</option>
-              </select>
-            </div>
+
             <div className="md:col-span-3 bg-blue-50/50 border border-blue-100 rounded-lg p-4 flex items-center gap-3">
               <Clock className="w-5 h-5 text-blue-600" />
               <p className="text-sm text-text-main">
