@@ -37,9 +37,11 @@ export default function InvoiceModal({ isOpen, onClose, invoiceData }) {
   
   // Calculate breakdown working backwards from Total
   const totalAmount = numericAmount;
-  const processingFee = Math.round((totalAmount * 0.02) * 100) / 100;
-  const gstOnFee = Math.round((totalAmount * 0.02 * 0.18) * 100) / 100;
-  const basePrice = Math.round((totalAmount - processingFee - gstOnFee) * 100) / 100;
+  const subTotal = Math.round((totalAmount / 1.02) * 100) / 100;
+  const courseFee = Math.round((subTotal / 1.18) * 100) / 100;
+  const gstOnCourse = Math.round((courseFee * 0.18) * 100) / 100;
+  const processingFee = Math.round((subTotal * 0.02) * 100) / 100;
+  const basePrice = courseFee;
   const currencySymbol = String(invoiceData.amount).replace(/[0-9.,]/g, '').trim() || '₹';
 
   const handlePrint = () => {
@@ -204,19 +206,26 @@ export default function InvoiceModal({ isOpen, onClose, invoiceData }) {
                 </div>
                 <div className="w-[40%] flex flex-col">
                    <div className="flex justify-between p-2 border-b border-gray-300 text-gray-600">
-                     <span>Course Fee</span>
+                     <span>Course Fee (After Discount)</span>
                      <span>{currencySymbol}{basePrice.toFixed(2)}</span>
+                   </div>
+                   <div className="flex justify-between p-2 border-b border-gray-300 text-gray-600">
+                     <span>GST @ 18%</span>
+                     <span>{currencySymbol}{gstOnCourse.toFixed(2)}</span>
+                   </div>
+                   <div className="flex justify-between p-2 border-b border-gray-300 font-bold bg-gray-50 uppercase text-xs tracking-widest items-center">
+                     <span>Subtotal (Course + GST)</span>
+                     <span className="text-sm">{currencySymbol}{subTotal.toFixed(2)}</span>
                    </div>
                    <div className="flex justify-between p-2 border-b border-gray-300 text-gray-600">
                      <span>Payment Processing Fee (2%)</span>
                      <span>{currencySymbol}{processingFee.toFixed(2)}</span>
                    </div>
-                   <div className="flex justify-between p-2 border-b border-gray-300 text-gray-600">
-                     <span>GST on Processing Fee (18%)</span>
-                     <span>{currencySymbol}{gstOnFee.toFixed(2)}</span>
-                   </div>
-                   <div className="flex justify-between p-2 border-b border-gray-300 font-bold text-lg bg-gray-100">
-                     <span>Total</span>
+                   <div className="flex justify-between p-2 border-b border-gray-300 font-bold text-lg bg-gray-100 items-center">
+                     <div className="flex flex-col">
+                       <span className="uppercase tracking-widest text-sm">Total Amount Payable</span>
+                       <span className="text-[10px] font-normal text-gray-500 normal-case tracking-normal">Inclusive of GST & Processing Fee</span>
+                     </div>
                      <span>{invoiceData.amount}</span>
                    </div>
                    <div className="flex justify-between p-2 border-b border-gray-300 font-bold">
