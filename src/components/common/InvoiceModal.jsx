@@ -37,10 +37,9 @@ export default function InvoiceModal({ isOpen, onClose, invoiceData }) {
   
   // Calculate breakdown working backwards from Total
   const totalAmount = numericAmount;
-  const subTotal = Math.round((totalAmount / 1.02) * 100) / 100;
-  const processingFee = Math.round((totalAmount - subTotal) * 100) / 100;
-  const basePrice = Math.round((subTotal / 1.18) * 100) / 100;
-  const gstAmount = Math.round((subTotal - basePrice) * 100) / 100;
+  const processingFee = Math.round((totalAmount * 0.02) * 100) / 100;
+  const gstOnFee = Math.round((totalAmount * 0.02 * 0.18) * 100) / 100;
+  const basePrice = Math.round((totalAmount - processingFee - gstOnFee) * 100) / 100;
   const currencySymbol = String(invoiceData.amount).replace(/[0-9.,]/g, '').trim() || '₹';
 
   const handlePrint = () => {
@@ -209,16 +208,12 @@ export default function InvoiceModal({ isOpen, onClose, invoiceData }) {
                      <span>{currencySymbol}{basePrice.toFixed(2)}</span>
                    </div>
                    <div className="flex justify-between p-2 border-b border-gray-300 text-gray-600">
-                     <span>GST (18%)</span>
-                     <span>{currencySymbol}{gstAmount.toFixed(2)}</span>
-                   </div>
-                   <div className="flex justify-between p-2 border-b border-gray-300 font-bold bg-gray-50">
-                     <span>Sub Total</span>
-                     <span>{currencySymbol}{subTotal.toFixed(2)}</span>
+                     <span>Payment Processing Fee (2%)</span>
+                     <span>{currencySymbol}{processingFee.toFixed(2)}</span>
                    </div>
                    <div className="flex justify-between p-2 border-b border-gray-300 text-gray-600">
-                     <span>Processing Fee (2%)</span>
-                     <span>{currencySymbol}{processingFee.toFixed(2)}</span>
+                     <span>GST on Processing Fee (18%)</span>
+                     <span>{currencySymbol}{gstOnFee.toFixed(2)}</span>
                    </div>
                    <div className="flex justify-between p-2 border-b border-gray-300 font-bold text-lg bg-gray-100">
                      <span>Total</span>
