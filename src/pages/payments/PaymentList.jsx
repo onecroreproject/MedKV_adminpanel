@@ -234,6 +234,21 @@ export default function PaymentList() {
     setShowInvoice(true);
   };
 
+  const handleViewReceipt = (payment) => {
+    setSelectedInvoice({
+      invoiceId: `INV-${(payment.razorpayPaymentId || payment._id).slice(-6).toUpperCase()}`,
+      receiptId: payment.razorpayPaymentId || payment._id,
+      date: new Date(payment.createdAt).toLocaleDateString(),
+      studentName: payment.student?.name || 'Unknown Student',
+      studentEmail: payment.student?.email || 'N/A',
+      courseName: payment.course?.title || 'Unknown Course',
+      amount: `₹${payment.amount.toFixed(2)}`,
+      rawAmount: payment.amount,
+      amountWords: 'Received with Thanks'
+    });
+    setShowInvoice(true);
+  };
+
   const getStatusVariant = (s) => ({ Success: 'success', Pending: 'warning', Failed: 'danger' }[s] || 'default');
 
   if (isLoading) return <div className="p-8 text-center text-gray-500 animate-pulse">Loading payments...</div>;
@@ -415,6 +430,10 @@ export default function PaymentList() {
                   <td className="p-4 align-top text-right">
                     {payment.status === 'Success' && (
                       <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => handleViewReceipt(payment)}
+                          className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-600 hover:text-white transition-colors" title="View Invoice">
+                          <Eye className="w-4 h-4" />
+                        </button>
                         <button onClick={() => handleDownloadReceipt(payment)}
                           className="p-2 text-brand-primary bg-brand-primary/10 rounded-lg hover:bg-brand-primary hover:text-white transition-colors" title="Download Receipt">
                           <Download className="w-4 h-4" />

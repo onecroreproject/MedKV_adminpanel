@@ -144,6 +144,7 @@ export default function PaymentDetails() {
           studentEmail: txnData.email,
           courseName: txnData.course,
           amount: txnData.amount,
+          rawAmount: 499,
           amountWords: 'Four Hundred Ninety Nine Only'
         }}
       />

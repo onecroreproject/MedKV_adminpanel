@@ -26,6 +26,23 @@ export default function InvoiceModal({ isOpen, onClose, invoiceData }) {
   const subjectSuffix = formattedDuration === 'Lifetime Access' ? 'Lifetime Access' : (formattedDuration.includes('Access') ? formattedDuration : `${formattedDuration} Access`);
   const itemSuffix = formattedDuration === 'Lifetime Access' ? 'Lifetime Access' : (formattedDuration.includes('Access') ? formattedDuration.replace('Access', '').trim() : formattedDuration);
 
+  // Extract numeric amount for calculation
+  let numericAmount = 0;
+  if (invoiceData.rawAmount) {
+     numericAmount = Number(invoiceData.rawAmount);
+  } else if (invoiceData.amount) {
+     const strVal = String(invoiceData.amount).replace(/[^0-9.]/g, '');
+     numericAmount = parseFloat(strVal) || 0;
+  }
+  
+  // Calculate breakdown working backwards from Total
+  const totalAmount = numericAmount;
+  const subTotal = Math.round((totalAmount / 1.02) * 100) / 100;
+  const processingFee = Math.round((totalAmount - subTotal) * 100) / 100;
+  const basePrice = Math.round((subTotal / 1.18) * 100) / 100;
+  const gstAmount = Math.round((subTotal - basePrice) * 100) / 100;
+  const currencySymbol = String(invoiceData.amount).replace(/[0-9.,]/g, '').trim() || '₹';
+
   const handlePrint = () => {
     const printContent = invoiceRef.current;
     const windowPrint = window.open('', '', 'left=0,top=0,width=800,height=900,toolbar=0,scrollbars=0,status=0');
@@ -170,8 +187,8 @@ export default function InvoiceModal({ isOpen, onClose, invoiceData }) {
                     <p className="text-gray-500 mt-1 leading-snug">Full Curriculum Access + Live Webinars ({itemSuffix})</p>
                   </div>
                   <div className="w-[10%] p-2 border-r border-gray-300 text-center shrink-0">1.00</div>
-                  <div className="w-[15%] p-2 border-r border-gray-300 text-right shrink-0">{invoiceData.amount}</div>
-                  <div className="w-[15%] p-2 text-right shrink-0">{invoiceData.amount}</div>
+                  <div className="w-[15%] p-2 border-r border-gray-300 text-right shrink-0">{currencySymbol}{basePrice.toFixed(2)}</div>
+                  <div className="w-[15%] p-2 text-right shrink-0">{currencySymbol}{basePrice.toFixed(2)}</div>
                 </div>
               </div>
 
@@ -187,17 +204,29 @@ export default function InvoiceModal({ isOpen, onClose, invoiceData }) {
                   </div>
                 </div>
                 <div className="w-[40%] flex flex-col">
-                   <div className="flex justify-between p-2 border-b border-gray-300">
-                     <span className="font-bold text-gray-600">Sub Total</span>
-                     <span>{invoiceData.amount}</span>
+                   <div className="flex justify-between p-2 border-b border-gray-300 text-gray-600">
+                     <span>Course Fee</span>
+                     <span>{currencySymbol}{basePrice.toFixed(2)}</span>
                    </div>
-                   <div className="flex justify-between p-2 border-b border-gray-300 font-bold">
+                   <div className="flex justify-between p-2 border-b border-gray-300 text-gray-600">
+                     <span>GST (18%)</span>
+                     <span>{currencySymbol}{gstAmount.toFixed(2)}</span>
+                   </div>
+                   <div className="flex justify-between p-2 border-b border-gray-300 font-bold bg-gray-50">
+                     <span>Sub Total</span>
+                     <span>{currencySymbol}{subTotal.toFixed(2)}</span>
+                   </div>
+                   <div className="flex justify-between p-2 border-b border-gray-300 text-gray-600">
+                     <span>Processing Fee (2%)</span>
+                     <span>{currencySymbol}{processingFee.toFixed(2)}</span>
+                   </div>
+                   <div className="flex justify-between p-2 border-b border-gray-300 font-bold text-lg bg-gray-100">
                      <span>Total</span>
                      <span>{invoiceData.amount}</span>
                    </div>
-                   <div className="flex justify-between p-2 border-b border-gray-300 font-bold bg-gray-50">
+                   <div className="flex justify-between p-2 border-b border-gray-300 font-bold">
                      <span>Balance Due</span>
-                     <span>$0.00</span>
+                     <span>{currencySymbol}0.00</span>
                    </div>
                    
                    <div className="p-4 flex flex-col items-center justify-center flex-1">
