@@ -158,7 +158,7 @@ export default function AddCourse() {
         title: data.title,
         slug: data.slug || undefined,
         description: data.fullDesc || data.shortDesc || '',
-        isImportant: data.isFeatured || false,
+        isImportant: data.isImportant || false,
         category: data.category || undefined,
         level: data.difficulty || '',
         languages: data.languages || [],
