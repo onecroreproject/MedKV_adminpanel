@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { ArrowLeft, Save, Video, Calendar, Link as LinkIcon, Shield, Clock, BookOpen, Layers, CheckSquare, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Save, Video, Calendar, Link as LinkIcon, Shield, Clock, BookOpen, Layers, CheckSquare, CheckCircle, X } from 'lucide-react';
 import { getCourses, getCourseById } from '../../services/courseService';
 import { getFaculty } from '../../services/facultyService';
 import { createLiveClass, getLiveClass, updateLiveClass } from '../../services/liveClassService';

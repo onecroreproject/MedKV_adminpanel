@@ -58,7 +58,7 @@ export default function LiveClassList() {
     fetchSessions();
 
     const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api/v1', '') : 'http://localhost:5000';
-    const socket = io(baseUrl);
+    const socket = io(baseUrl, { transports: ['websocket', 'polling'] });
     
     socket.on('liveClassUpdate', () => {
       fetchSessions();
