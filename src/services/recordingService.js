@@ -1,7 +1,7 @@
 import axiosInstance from './axiosInstance';
 
-export const getRecordings = async () => {
-  const response = await axiosInstance.get('/recordings');
+export const getRecordings = async (params) => {
+  const response = await axiosInstance.get('/recordings', { params });
   return response.data;
 };
 
