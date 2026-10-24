@@ -111,9 +111,9 @@ export default function LiveClassList() {
     try {
       await updateLiveClass(session._id, { status: 'Live Now' });
       fetchSessions();
-      const classroomBase = import.meta.env.VITE_CLASSROOM_URL || 'http://localhost:5173';
+      const classroomBase = import.meta.env.VITE_CLASSROOM_URL || 'https://www.drsamreefathradiologyacademy.com';
       const token = localStorage.getItem('token');
-      const url = `${classroomBase}/classroom/${session._id}`;
+      const url = `${classroomBase}/classroom/${session._id}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
       window.open(url, '_blank');
     } catch (error) {
       console.error('Failed to start session', error);
@@ -411,9 +411,9 @@ export default function LiveClassList() {
                             <>
                               <button 
                                 onClick={(e) => { 
-                                  const classroomBase = import.meta.env.VITE_CLASSROOM_URL || 'http://localhost:5173';
+                                  const classroomBase = import.meta.env.VITE_CLASSROOM_URL || 'https://www.drsamreefathradiologyacademy.com';
                                   const token = localStorage.getItem('token');
-                                  const url = `${classroomBase}/classroom/${session._id}?token=${token}`;
+                                  const url = `${classroomBase}/classroom/${session._id}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
                                   window.open(url, '_blank');
                                 }} 
                                 className="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition-colors">
