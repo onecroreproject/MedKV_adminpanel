@@ -205,104 +205,109 @@ export default function RecordingList() {
             <table className="w-full text-left text-sm text-text-main whitespace-nowrap">
               <thead className="bg-gray-50 text-text-muted font-medium border-b border-gray-100">
                 <tr>
-                  <th className="px-6 py-4">
-                    <input type="checkbox" className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
-                  </th>
                   <th className="px-6 py-4">Session Info</th>
                   <th className="px-6 py-4">Course & Faculty</th>
                   <th className="px-6 py-4">Duration</th>
-                  <th className="px-6 py-4">Views</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {loading ? (
-                  <tr><td colSpan="7" className="px-6 py-4 text-center text-text-muted">Loading recordings...</td></tr>
+                  <tr><td colSpan="5" className="px-6 py-4 text-center text-text-muted">Loading recordings...</td></tr>
                 ) : filteredRecordings.length === 0 ? (
-                  <tr><td colSpan="7" className="px-6 py-4 text-center text-text-muted">No recordings found</td></tr>
-                ) : paginatedRecordings.map((rec) => (
-                  <tr key={rec._id} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <input type="checkbox" className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="relative w-20 h-12 rounded-lg bg-gray-200 overflow-hidden shrink-0 group-hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedVideo(rec)}>
-                          <div className="absolute inset-0 bg-brand-primary/10 group-hover:bg-brand-primary/20 transition-colors flex items-center justify-center">
-                            <PlayCircle className="w-6 h-6 text-brand-primary opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-sm" />
+                  <tr><td colSpan="5" className="px-6 py-4 text-center text-text-muted">No recordings found</td></tr>
+                ) : paginatedRecordings.map((rec) => {
+                  const courseTitleNorm = (rec.course?.title || '').trim().toLowerCase();
+                  const rawTitle = (rec.title || '').trim();
+                  const rawTitleNorm = rawTitle.toLowerCase();
+                  const isCourseName = courseTitleNorm && (
+                    rawTitleNorm === courseTitleNorm ||
+                    rawTitleNorm.startsWith(courseTitleNorm)
+                  );
+                  const displayTitle = isCourseName ? null : (rec.title || rec.liveClass?.title);
+
+                  return (
+                    <tr key={rec._id} className="hover:bg-gray-50/50 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="relative w-20 h-12 rounded-lg bg-gray-200 overflow-hidden shrink-0 group-hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedVideo(rec)}>
+                            <div className="absolute inset-0 bg-brand-primary/10 group-hover:bg-brand-primary/20 transition-colors flex items-center justify-center">
+                              <PlayCircle className="w-6 h-6 text-brand-primary opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-sm" />
+                            </div>
+                          </div>
+                          <div>
+                            {displayTitle && (
+                              <button 
+                                onClick={() => navigate(`/recordings/${rec._id}`)}
+                                className="font-semibold text-text-main hover:text-brand-primary transition-colors text-left max-w-[200px] truncate block"
+                                title={displayTitle}
+                              >
+                                {displayTitle}
+                              </button>
+                            )}
+                            {rec.liveClass && !isCourseName && (
+                              <span className="text-[10px] font-bold text-brand-primary bg-brand-primary/10 px-1.5 py-0.5 rounded mt-1 inline-block">
+                                Live Class: {rec.liveClass.title}
+                              </span>
+                            )}
+                            <p className="text-xs text-text-muted mt-0.5">Uploaded {new Date(rec.createdAt).toLocaleDateString()}</p>
                           </div>
                         </div>
-                        <div>
-                          <button 
-                            onClick={() => navigate(`/recordings/${rec._id}`)}
-                            className="font-semibold text-text-main hover:text-brand-primary transition-colors text-left max-w-[200px] truncate block"
-                            title={rec.title || rec.liveClass?.title || 'Untitled Recording'}
-                          >
-                            {rec.title || rec.liveClass?.title || 'Untitled Recording'}
-                          </button>
-                          {rec.liveClass && (
-                            <span className="text-[10px] font-bold text-brand-primary bg-brand-primary/10 px-1.5 py-0.5 rounded mt-1 inline-block">
-                              Live Class: {rec.liveClass.title}
-                            </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium text-text-main">{rec.course?.title || 'General'}</span>
+                          <span className="text-xs text-text-muted">{rec.faculty?.name || 'Unassigned'}</span>
+                          
+                          {/* Dynamic Curriculum Display */}
+                          {(rec.courseModule || rec.lesson || rec.liveClass?.courseModule || rec.liveClass?.lesson) && (
+                            <div className="flex flex-col gap-1 mt-1">
+                              {(rec.courseModule || rec.liveClass?.courseModule) && (
+                                <span className="text-[10px] font-bold px-2 py-1 rounded bg-purple-500/10 text-purple-600 w-fit">
+                                  Module: {(rec.courseModule?.title || rec.liveClass?.courseModule?.title)}
+                                </span>
+                              )}
+                              {(rec.lesson || rec.liveClass?.lesson) && (
+                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 w-fit">
+                                  L: {(rec.lesson?.title || rec.liveClass?.lesson?.title)}
+                                </span>
+                              )}
+                            </div>
                           )}
-                          <p className="text-xs text-text-muted mt-0.5">Uploaded {new Date(rec.createdAt).toLocaleDateString()}</p>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <span className="font-medium text-text-main">{rec.course?.title || 'General'}</span>
-                        <span className="text-xs text-text-muted">{rec.faculty?.name || 'Unassigned'}</span>
-                        
-                        {/* Dynamic Curriculum Display */}
-                        {(rec.courseModule || rec.lesson || rec.liveClass?.courseModule || rec.liveClass?.lesson) && (
-                          <div className="flex flex-col gap-1 mt-1">
-                            {(rec.courseModule || rec.liveClass?.courseModule) && (
-                              <span className="text-[10px] font-bold px-2 py-1 rounded bg-purple-500/10 text-purple-600 w-fit">
-                                Module: {(rec.courseModule?.title || rec.liveClass?.courseModule?.title)}
-                              </span>
-                            )}
-                            {(rec.lesson || rec.liveClass?.lesson) && (
-                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 w-fit">
-                                L: {(rec.lesson?.title || rec.liveClass?.lesson?.title)}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-text-muted flex items-center gap-1.5 pt-6">
-                      <Clock className="w-3.5 h-3.5" /> {rec.duration || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 text-text-muted font-medium">
-                      -
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge status={getStatusColor(rec.isPublished ? 'Published' : 'Draft')}>
-                        {rec.isPublished ? 'Published' : 'Draft'}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button 
-                          onClick={() => navigate(`/recordings/${rec._id}`)} 
-                          className="p-1.5 hover:bg-blue-50 rounded-lg text-gray-400 hover:text-brand-primary transition-colors"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(rec._id)} 
-                          className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
-                          title="Delete Recording"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-6 py-4 text-text-muted">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5" /> {rec.duration || 'N/A'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge status={getStatusColor(rec.isPublished ? 'Published' : 'Draft')}>
+                          {rec.isPublished ? 'Published' : 'Draft'}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button 
+                            onClick={() => navigate(`/recordings/${rec._id}`)} 
+                            className="p-1.5 hover:bg-blue-50 rounded-lg text-gray-400 hover:text-brand-primary transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(rec._id)} 
+                            className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
+                            title="Delete Recording"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -337,8 +342,7 @@ export default function RecordingList() {
                 <p className="text-xs text-text-muted mb-3">{rec.course?.title || 'General'}</p>
                 
                 <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-50">
-                  <span className="truncate max-w-[120px]">{rec.faculty?.name || 'Unassigned'}</span>
-                  <span>- views</span>
+                  <span className="truncate">{rec.faculty?.name || 'Unassigned'}</span>
                 </div>
               </div>
             </div>
