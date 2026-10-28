@@ -201,22 +201,22 @@ export default function RecordingList() {
       {view === 'list' ? (
         /* Table View */
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-text-main whitespace-nowrap">
-              <thead className="bg-gray-50 text-text-muted font-medium border-b border-gray-100">
+          <div className="w-full">
+            <table className="w-full table-fixed text-left text-sm text-text-main">
+              <thead className="bg-gray-50 text-text-muted font-medium border-b border-gray-100 text-xs">
                 <tr>
-                  <th className="px-6 py-4">Session Info</th>
-                  <th className="px-6 py-4">Course & Faculty</th>
-                  <th className="px-6 py-4">Duration</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-4 py-3.5 w-[32%]">Session Info</th>
+                  <th className="px-4 py-3.5 w-[36%]">Course & Faculty</th>
+                  <th className="px-4 py-3.5 w-[11%]">Duration</th>
+                  <th className="px-4 py-3.5 w-[10%]">Status</th>
+                  <th className="px-4 py-3.5 w-[11%] text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {loading ? (
-                  <tr><td colSpan="5" className="px-6 py-4 text-center text-text-muted">Loading recordings...</td></tr>
+                  <tr><td colSpan="5" className="px-4 py-6 text-center text-text-muted">Loading recordings...</td></tr>
                 ) : filteredRecordings.length === 0 ? (
-                  <tr><td colSpan="5" className="px-6 py-4 text-center text-text-muted">No recordings found</td></tr>
+                  <tr><td colSpan="5" className="px-4 py-6 text-center text-text-muted">No recordings found</td></tr>
                 ) : paginatedRecordings.map((rec) => {
                   const courseTitleNorm = (rec.course?.title || '').trim().toLowerCase();
                   const rawTitle = (rec.title || '').trim();
@@ -229,47 +229,65 @@ export default function RecordingList() {
 
                   return (
                     <tr key={rec._id} className="hover:bg-gray-50/50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="relative w-20 h-12 rounded-lg bg-gray-200 overflow-hidden shrink-0 group-hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedVideo(rec)}>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="relative w-16 h-10 sm:w-20 sm:h-12 rounded-lg bg-gray-200 overflow-hidden shrink-0 group-hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedVideo(rec)}>
                             <div className="absolute inset-0 bg-brand-primary/10 group-hover:bg-brand-primary/20 transition-colors flex items-center justify-center">
-                              <PlayCircle className="w-6 h-6 text-brand-primary opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-sm" />
+                              <PlayCircle className="w-5 h-5 sm:w-6 sm:h-6 text-brand-primary opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-sm" />
                             </div>
                           </div>
-                          <div>
+                          <div className="min-w-0 flex-1">
                             {displayTitle && (
                               <button 
                                 onClick={() => navigate(`/recordings/${rec._id}`)}
-                                className="font-semibold text-text-main hover:text-brand-primary transition-colors text-left max-w-[200px] truncate block"
+                                className="font-semibold text-text-main hover:text-brand-primary transition-colors text-left truncate block w-full"
                                 title={displayTitle}
                               >
                                 {displayTitle}
                               </button>
                             )}
                             {rec.liveClass && !isCourseName && (
-                              <span className="text-[10px] font-bold text-brand-primary bg-brand-primary/10 px-1.5 py-0.5 rounded mt-1 inline-block">
+                              <span 
+                                className="text-[10px] font-bold text-brand-primary bg-brand-primary/10 px-1.5 py-0.5 rounded mt-1 truncate inline-block max-w-full"
+                                title={rec.liveClass.title}
+                              >
                                 Live Class: {rec.liveClass.title}
                               </span>
                             )}
-                            <p className="text-xs text-text-muted mt-0.5">Uploaded {new Date(rec.createdAt).toLocaleDateString()}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1">
-                          <span className="font-medium text-text-main">{rec.course?.title || 'General'}</span>
-                          <span className="text-xs text-text-muted">{rec.faculty?.name || 'Unassigned'}</span>
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <span 
+                            className="font-medium text-text-main break-words leading-snug block"
+                            title={rec.course?.title || 'General'}
+                          >
+                            {rec.course?.title || 'General'}
+                          </span>
+                          <span 
+                            className="text-xs text-text-muted break-words block"
+                            title={rec.faculty?.name || 'Unassigned'}
+                          >
+                            {rec.faculty?.name || 'Unassigned'}
+                          </span>
                           
                           {/* Dynamic Curriculum Display */}
                           {(rec.courseModule || rec.lesson || rec.liveClass?.courseModule || rec.liveClass?.lesson) && (
-                            <div className="flex flex-col gap-1 mt-1">
+                            <div className="flex flex-wrap items-center gap-1 mt-1 min-w-0">
                               {(rec.courseModule || rec.liveClass?.courseModule) && (
-                                <span className="text-[10px] font-bold px-2 py-1 rounded bg-purple-500/10 text-purple-600 w-fit">
+                                <span 
+                                  className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 truncate inline-block max-w-full"
+                                  title={`Module: ${rec.courseModule?.title || rec.liveClass?.courseModule?.title}`}
+                                >
                                   Module: {(rec.courseModule?.title || rec.liveClass?.courseModule?.title)}
                                 </span>
                               )}
                               {(rec.lesson || rec.liveClass?.lesson) && (
-                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 w-fit">
+                                <span 
+                                  className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 truncate inline-block max-w-full"
+                                  title={`L: ${rec.lesson?.title || rec.liveClass?.lesson?.title}`}
+                                >
                                   L: {(rec.lesson?.title || rec.liveClass?.lesson?.title)}
                                 </span>
                               )}
@@ -277,18 +295,19 @@ export default function RecordingList() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-text-muted">
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5" /> {rec.duration || 'N/A'}
+                      <td className="px-4 py-3.5 text-text-muted">
+                        <div className="flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+                          <Clock className="w-3.5 h-3.5 shrink-0" /> 
+                          <span>{rec.duration || 'N/A'}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3.5 whitespace-nowrap">
                         <Badge status={getStatusColor(rec.isPublished ? 'Published' : 'Draft')}>
                           {rec.isPublished ? 'Published' : 'Draft'}
                         </Badge>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button 
                             onClick={() => navigate(`/recordings/${rec._id}`)} 
                             className="p-1.5 hover:bg-blue-50 rounded-lg text-gray-400 hover:text-brand-primary transition-colors"
